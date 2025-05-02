@@ -67,6 +67,7 @@ jobs:
             --resource-group "$RESOURCE_GROUP" \
             --name "$CONTAINER_NAME" \
             --image "$IMAGE_REF" \
+            --os-type Linux \
             --cpu 1 \
             --memory 1.5 \
             --restart-policy OnFailure \
