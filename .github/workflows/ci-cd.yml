@@ -5,8 +5,9 @@ name: CI/CD
 on:
   push:
     branches: [main]
-  environment:
-    name: Production
+
+environment:
+  name: Production
 
 jobs:
   build-and-push:
