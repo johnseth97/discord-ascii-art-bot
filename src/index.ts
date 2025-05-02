@@ -8,12 +8,11 @@ import {
 } from "discord.js";
 import fs from "fs";
 import path from "path";
-import dotenv from "dotenv";
 import * as os from "os";
 import { readdir, stat, unlink } from "fs/promises";
 
 if (process.env.NODE_ENV !== "production") {
-  dotenv.config();
+  import("dotenv").then((dotenv) => dotenv.config());
 }
 
 // Extend Client to include commands
