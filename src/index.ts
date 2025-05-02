@@ -12,7 +12,9 @@ import dotenv from "dotenv";
 import * as os from "os";
 import { readdir, stat, unlink } from "fs/promises";
 
-dotenv.config();
+if (process.env.NODE_ENV !== "production") {
+  dotenv.config();
+}
 
 // Extend Client to include commands
 declare module "discord.js" {

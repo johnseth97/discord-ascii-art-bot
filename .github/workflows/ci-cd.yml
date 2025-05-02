@@ -73,5 +73,10 @@ jobs:
             --restart-policy OnFailure \
             --registry-login-server ghcr.io \
             --registry-username "${{ github.actor }}" \
-            --registry-password "${{ secrets.GITHUB_TOKEN }}"
+            --registry-password "${{ secrets.GITHUB_TOKEN }}" \
+            --environment-variables \
+              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
+              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
+              NODE_ENV="production"
+              
 ...
