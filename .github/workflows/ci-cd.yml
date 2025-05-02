@@ -40,7 +40,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-jobs:
   deploy-to-aca:
     needs: build-and-push
     runs-on: ubuntu-latest
