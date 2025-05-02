@@ -155,7 +155,7 @@ export async function execute(
     env: {
       ...process.env,
       TERM: "xterm-256color",
-      COLORTERM: "8bit",
+      COLORTERM: "24bit",
       FORCE_COLOR: "1",
     },
   });

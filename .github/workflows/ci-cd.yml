@@ -79,6 +79,6 @@ jobs:
               DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
               NODE_ENV="production" \
               TERM="xterm-256color" \
-              COLORTERM="truecolor" \
+              COLORTERM="24bit" \
               FORCE_COLOR="1"
 ...

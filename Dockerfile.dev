@@ -1,4 +1,4 @@
-# Dockerfile
+# Dockerfile.dev
 FROM node:20-slim
 
 # enable apt over HTTPS & install the converter
