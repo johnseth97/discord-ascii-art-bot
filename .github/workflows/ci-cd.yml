@@ -52,7 +52,7 @@ jobs:
 
       - name: Deploy to Azure Container Instances
         run: |
-          RESOURCE_GROUP="your-resource-group"
+          RESOURCE_GROUP="discord-bots"
           CONTAINER_NAME="ascii-art-bot"
           IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
 
