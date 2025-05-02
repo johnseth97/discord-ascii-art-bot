@@ -1,5 +1,12 @@
 // src/commands/ascii.ts
-import { SlashCommandBuilder, ChatInputCommandInteraction } from "discord.js";
+import {
+  SlashCommandBuilder,
+  ChatInputCommandInteraction,
+  SlashCommandAttachmentOption,
+  SlashCommandBooleanOption,
+  SlashCommandIntegerOption,
+  SlashCommandStringOption,
+} from "discord.js";
 import { spawn } from "child_process";
 import { download } from "../utils/download";
 import * as os from "os";
@@ -9,23 +16,22 @@ import { randomUUID } from "crypto";
 
 export const data = new SlashCommandBuilder()
   .setName("ascii")
-  .setDescription("Convert an image to ASCII art or PNG representation")
-  .addAttachmentOption((opt) =>
-    opt.setName("image").setDescription("Image to convert").setRequired(true),
+  .setDescription(
+    "Convert an image to ASCII art or PNG representation. Provide either an attachment or a URL.",
   )
-  .addBooleanOption((opt) =>
-    opt.setName("braille").setDescription("Use braille characters"),
+  .addAttachmentOption((opt: SlashCommandAttachmentOption) =>
+    opt
+      .setName("image")
+      .setDescription("Upload an image to convert")
+      .setRequired(false),
   )
-  .addBooleanOption((opt) =>
-    opt.setName("dither").setDescription("Apply dithering (for braille)"),
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("url")
+      .setDescription("Direct link to an image to convert")
+      .setRequired(false),
   )
-  .addBooleanOption((opt) =>
-    opt.setName("color").setDescription("ANSI color output"),
-  )
-  .addIntegerOption((opt) =>
-    opt.setName("width").setDescription("Max width in characters"),
-  )
-  .addStringOption((opt) =>
+  .addStringOption((opt: SlashCommandStringOption) =>
     opt
       .setName("output")
       .setDescription("Output format")
@@ -33,6 +39,27 @@ export const data = new SlashCommandBuilder()
         { name: "Text (ANSI)", value: "text" },
         { name: "PNG Image", value: "png" },
       ),
+  )
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("quality")
+      .setDescription("Quality mode: embedding or max resolution")
+      .addChoices(
+        { name: "Standard (embedded)", value: "standard" },
+        { name: "Max (no embed, full resolution)", value: "max" },
+      ),
+  )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt.setName("braille").setDescription("Use braille characters"),
+  )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt.setName("dither").setDescription("Apply dithering (for braille)"),
+  )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt.setName("color").setDescription("ANSI color output"),
+  )
+  .addIntegerOption((opt: SlashCommandIntegerOption) =>
+    opt.setName("width").setDescription("Max width in characters"),
   );
 
 export async function execute(
@@ -40,24 +67,31 @@ export async function execute(
 ): Promise<void> {
   await interaction.deferReply();
 
-  // Download & rename input to deterministic path
-  const attachment = interaction.options.getAttachment("image", true);
-  const orig = await download(attachment.url);
-  const ext = path.extname(orig) || ".png";
+  // Require either attachment or URL
+  const attachment = interaction.options.getAttachment("image");
+  const urlString = interaction.options.getString("url");
+  if (!attachment && !urlString) {
+    await interaction.editReply({
+      content: "❌ You must provide either an image attachment or a URL.",
+    });
+    return;
+  }
+
+  const imageUrl = attachment?.url ?? urlString!;
+  const originalPath = await download(imageUrl);
+  const ext = path.extname(originalPath) || ".png";
   const id = randomUUID();
   const inputPath = path.join(os.tmpdir(), `${id}${ext}`);
-  await rename(orig, inputPath);
+  await rename(originalPath, inputPath);
 
-  // Read options
   const output = interaction.options.getString("output") ?? "text";
+  const quality = interaction.options.getString("quality") ?? "standard";
   const useBraille = interaction.options.getBoolean("braille") ?? false;
   const useDither = interaction.options.getBoolean("dither") ?? false;
   const useColor = interaction.options.getBoolean("color") ?? false;
-  const DEFAULT_WIDTH = 80;
   const w = interaction.options.getInteger("width");
-  const width = typeof w === "number" ? w : DEFAULT_WIDTH;
+  const width = typeof w === "number" ? w : 80;
 
-  // PNG branch
   if (output === "png") {
     const tmpDir = os.tmpdir();
     const outputFile = path.join(tmpDir, `${id}-ascii-art.png`);
@@ -72,6 +106,7 @@ export async function execute(
       tmpDir,
       "--only-save",
     ];
+
     const proc = spawn("ascii-image-converter", args, {
       env: {
         ...process.env,
@@ -81,28 +116,32 @@ export async function execute(
       },
     });
     let stderr = "";
-    proc.stderr.on("data", (c) => (stderr += c.toString()));
+    proc.stderr.on("data", (chunk) => (stderr += chunk.toString()));
+
     proc.on("close", async (code) => {
       try {
         if (code !== 0) {
           console.error("PNG conversion error:", stderr);
-          return await interaction.editReply({
+          await interaction.editReply({
             content: `❌ PNG conversion failed (exit code ${code}).`,
           });
+          return;
         }
+        const base = `${id}-ascii-art.png`;
+        const name = quality === "max" ? `SPOILER_${base}` : base;
         await interaction.editReply({
-          files: [{ attachment: outputFile, name: `${id}-ascii-art.png` }],
+          files: [{ attachment: outputFile, name }],
         });
       } finally {
-        // Cleanup temp files
         await unlink(inputPath).catch(() => {});
-        await unlink(outputFile).catch(() => {});
+        await unlink(path.join(os.tmpdir(), `${id}-ascii-art.png`)).catch(
+          () => {},
+        );
       }
     });
     return;
   }
 
-  // Text branch (ANSI)
   const argsText = [
     inputPath,
     "--width",
@@ -120,33 +159,34 @@ export async function execute(
       FORCE_COLOR: "1",
     },
   });
+
   let stdout = "";
-  let stderr = "";
-  procText.stdout.on("data", (c) => (stdout += c.toString()));
-  procText.stderr.on("data", (c) => (stderr += c.toString()));
+  let stderrText = "";
+  procText.stdout.on("data", (chunk) => (stdout += chunk.toString()));
+  procText.stderr.on("data", (chunk) => (stderrText += chunk.toString()));
   procText.on("close", async (code) => {
     const txtFile = path.join(os.tmpdir(), `${id}.ansi.txt`);
     try {
       if (code !== 0) {
-        console.error("Text conversion error:", stderr);
-        return await interaction.editReply({
+        console.error("Text conversion error:", stderrText);
+        await interaction.editReply({
           content: `❌ Text conversion failed (exit code ${code}).`,
         });
+        return;
       }
       const colored = stdout + "\u001b[0m";
       if (colored.length > 1900) {
         await writeFile(txtFile, colored);
-        return await interaction.editReply({
+        await interaction.editReply({
           content: "Output too long; sending as text file.",
           files: [{ attachment: txtFile, name: "ascii.txt" }],
         });
       } else {
-        return await interaction.editReply({
+        await interaction.editReply({
           content: `\`\`\`ansi\n${colored}\n\`\`\``,
         });
       }
     } finally {
-      // Cleanup temp files
       await unlink(inputPath).catch(() => {});
       await unlink(txtFile).catch(() => {});
     }
