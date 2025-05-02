@@ -1,35 +1,63 @@
-// src/deploy-commands.ts
 import { REST, Routes } from "discord.js";
 import fs from "fs";
 import path from "path";
 import dotenv from "dotenv";
+
 dotenv.config();
 
-const commands = [];
+// Determine environment
+const ENV = process.env.NODE_ENV || "development";
+let clientId: string;
+let guildId: string | undefined;
+let botToken: string;
+
+switch (ENV) {
+  case "production":
+    clientId = process.env.DISCORD_CLIENT_ID!;
+    botToken = process.env.DISCORD_BOT_TOKEN!;
+    // Global registration for production
+    break;
+  case "test":
+    clientId = process.env.DISCORD_CLIENT_ID_TESTING!;
+    guildId = process.env.DISCORD_GUILD_ID_TESTING!;
+    botToken = process.env.DISCORD_BOT_TOKEN_TESTING!;
+    break;
+  case "development":
+  default:
+    clientId = process.env.DISCORD_CLIENT_ID_DEVELOPMENT!;
+    guildId = process.env.DISCORD_GUILD_ID_DEVELOPMENT!;
+    botToken = process.env.DISCORD_BOT_TOKEN_DEVELOPMENT!;
+}
+
+// Load all command JSON
+const commands: any[] = [];
 const commandsPath = path.join(__dirname, "commands");
 for (const file of fs.readdirSync(commandsPath)) {
   if (file.endsWith(".js") || file.endsWith(".ts")) {
     const command = require(path.join(commandsPath, file));
-    commands.push(command.data.toJSON());
+    if (command.data) {
+      commands.push(command.data.toJSON());
+    }
   }
 }
 
-const rest = new REST({ version: "10" }).setToken(
-  process.env.DISCORD_BOT_TOKEN!,
-);
+const token = botToken;
+const rest = new REST({ version: "10" }).setToken(token);
 
 (async () => {
   try {
-    console.log("Refreshing application (/) commands...");
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.DISCORD_CLIENT_ID!,
-        process.env.DISCORD_GUILD_ID!,
-      ),
-      { body: commands },
-    );
-    console.log("Commands reloaded successfully.");
+    console.log(`Registering ${commands.length} commands for ${ENV}...`);
+    if (ENV === "production") {
+      await rest.put(Routes.applicationCommands(clientId), { body: commands });
+      console.log("Global commands registered.");
+    } else {
+      await rest.put(Routes.applicationGuildCommands(clientId, guildId!), {
+        body: commands,
+      });
+      console.log(`Commands registered to guild ${guildId}.`);
+    }
   } catch (error) {
-    console.error("Error reloading commands:", error);
+    console.error("Error registering commands:", error);
+    process.exit(1);
   }
 })();

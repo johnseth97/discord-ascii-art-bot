@@ -8,20 +8,21 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - testing
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment:
-      name: Production
+    # Use the branch name to select the environment
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
     outputs:
       image-ref: ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # Log in to GHCR
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -29,7 +30,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build & push
       - name: Build and push Docker image
         run: |
           IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
@@ -41,8 +41,7 @@ jobs:
   deploy-to-aci:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment:
-      name: Production
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
 
     steps:
       - name: Azure Login
@@ -52,17 +51,21 @@ jobs:
 
       - name: Deploy to Azure Container Instances
         run: |
-          RESOURCE_GROUP="discord-bots"
-          CONTAINER_NAME="ascii-art-bot"
+          # choose resource group & container name based on branch
+            RESOURCE_GROUP="discord-bots"
+            CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
+            DISCORD_BOT_TOKEN_SECRET="DISCORD_BOT_TOKEN"
+            DISCORD_CLIENT_ID_SECRET="DISCORD_CLIENT_ID"
+
           IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
 
-          # If the container group already exists, delete it first:
+          # delete previous
           az container delete \
             --resource-group "$RESOURCE_GROUP" \
             --name "$CONTAINER_NAME" \
             --yes || true
 
-          # Create/update container instance
+          # create/update
           az container create \
             --resource-group "$RESOURCE_GROUP" \
             --name "$CONTAINER_NAME" \
@@ -75,10 +78,11 @@ jobs:
             --registry-username "${{ github.actor }}" \
             --registry-password "${{ secrets.GITHUB_TOKEN }}" \
             --environment-variables \
-              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
-              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
+              DISCORD_BOT_TOKEN="${{ secrets[DISCORD_BOT_TOKEN_SECRET] }}" \
+              DISCORD_CLIENT_ID="${{ secrets[DISCORD_CLIENT_ID_SECRET] }}" \
               NODE_ENV="production" \
               TERM="xterm-256color" \
               COLORTERM="24bit" \
               FORCE_COLOR="1"
+        shell: bash
 ...
