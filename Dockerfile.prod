@@ -1,0 +1,32 @@
+# Dockerfile.prod
+FROM node:20-alpine AS build
+
+# Install package dependencies
+# enable apt over HTTPS & install the converter
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+       gnupg2 \
+       apt-transport-https \
+       ca-certificates \
+       curl \
+  && echo 'deb [trusted=yes] https://apt.fury.io/ascii-image-converter/ /' \
+       > /etc/apt/sources.list.d/ascii-image-converter.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends ascii-image-converter \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY package*.json tsconfig.json ./
+RUN npm ci
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runtime
+WORKDIR /app
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/node_modules ./node_modules
+# Install system dependency
+RUN apk add --no-cache dumb-init
+# (Assuming ascii-image-converter installed via apt in Debian; if Alpine, you might need a scratch build or switch base)
+ENTRYPOINT ["/usr/bin/dumb-init", "--"]
+CMD ["node", "dist/index.js"]

@@ -1,6 +1,6 @@
 version: "3.8"
 services:
-  bot:
+  ascii-art-bot-dev:
     build: .
     ports: []
     environment:
