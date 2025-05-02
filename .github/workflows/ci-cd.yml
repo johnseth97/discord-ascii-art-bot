@@ -40,39 +40,27 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-to-aca:
-    needs: build-and-push
+  deploy:
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
-    env:
-      RG: discord-bots
-      CA_ENV: discord-bots-aca-env
-      APP_NAME: ${{ vars.CONTAINER_NAME }}
-      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
+
     steps:
-      - name: Azure Login
+      - uses: actions/checkout@v3
+
+      - name: Log in to Azure
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Container Apps
-        run: |
-          az containerapp up \
-            --name $APP_NAME \
-            --resource-group $RG \
-            --environment $CA_ENV \
-            --image $IMAGE_REF \
-            --cpu 1 --memory 1.5Gi \
-            --min-replicas 0 --max-replicas 1 \
-            --env-vars \
-               DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
-               DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
-               NODE_ENV="production" \
-               TERM="xterm-256color" \
-               COLORTERM="24bit" \
-               FORCE_COLOR="1" \
-            --ingress internal \
-            --registry-server ghcr.io \
-            --registry-username "${{ github.actor }}" \
-            --registry-password "${{ secrets.GITHUB_TOKEN }}"
-        shell: bash
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          # Your existing RG and Container App name
+          resourceGroup: discord-bots
+          containerAppName: ${{ vars.CONTAINER_NAME }}
+
+          # Tell it to deploy your GHCR image + tag
+          imageToDeploy: ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ vars.PACKAGE_TAG }}
+
+          # Since this is GHCR (not ACR), provide registry creds
+          acrUsername: ${{ github.actor }}
+          acrPassword: ${{ secrets.GITHUB_TOKEN }}
