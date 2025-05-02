@@ -1,0 +1,10 @@
+version: "3.8"
+services:
+  bot:
+    build: .
+    ports: []
+    environment:
+      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+    volumes:
+      - ./:/app
+    command: npm run dev

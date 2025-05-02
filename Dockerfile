@@ -1,0 +1,31 @@
+# Dockerfile
+FROM node:20-slim
+
+# enable apt over HTTPS & install the converter
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+       gnupg2 \
+       apt-transport-https \
+       ca-certificates \
+       curl \
+  && echo 'deb [trusted=yes] https://apt.fury.io/ascii-image-converter/ /' \
+       > /etc/apt/sources.list.d/ascii-image-converter.list \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends ascii-image-converter \
+  && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+
+# copy package files & install JS deps
+COPY package.json package-lock.json tsconfig.json ./
+RUN npm ci
+
+# copy source & build
+COPY . .
+RUN npm run build
+
+# dev vs prod entrypoint
+# for local development with live‐reload:
+CMD ["npm", "run", "dev"]
+# for production, comment the line above and uncomment:
+# CMD ["npm", "start"]
