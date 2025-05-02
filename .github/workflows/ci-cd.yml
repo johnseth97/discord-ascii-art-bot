@@ -41,6 +41,8 @@ jobs:
   deploy-to-aci:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment:
+      name: Production
 
     steps:
       - name: Azure Login
