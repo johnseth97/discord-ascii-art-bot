@@ -1,9 +1,10 @@
+# GH-Actions: .github/workflows/ci-cd.yml
+---
 name: CI/CD
 
 on:
   push:
     branches: [main]
-
   environment:
     name: Production
 
@@ -66,3 +67,4 @@ jobs:
             --registry-login-server ghcr.io \
             --registry-username "${{ github.actor }}" \
             --registry-password "${{ secrets.GITHUB_TOKEN }}"
+...
