@@ -54,10 +54,7 @@ jobs:
           # choose resource group & container name based on branch
             RESOURCE_GROUP="discord-bots"
             CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
-            DISCORD_BOT_TOKEN_SECRET="secrets.DISCORD_BOT_TOKEN"
-            DISCORD_CLIENT_ID_SECRET="secrets.DISCORD_CLIENT_ID"
-
-          IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
+            IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ env.PACKAGE_TAG }}
 
           # delete previous
           az container delete \
@@ -78,8 +75,8 @@ jobs:
             --registry-username "${{ github.actor }}" \
             --registry-password "${{ secrets.GITHUB_TOKEN }}" \
             --environment-variables \
-              DISCORD_BOT_TOKEN="${{ secrets[DISCORD_BOT_TOKEN_SECRET] }}" \
-              DISCORD_CLIENT_ID="${{ secrets[DISCORD_CLIENT_ID_SECRET] }}" \
+              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
+              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
               NODE_ENV="production" \
               TERM="xterm-256color" \
               COLORTERM="24bit" \
