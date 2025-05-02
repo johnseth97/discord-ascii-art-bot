@@ -42,6 +42,9 @@ jobs:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    env:
+      CONTAINER_NAME: ${{ env.CONTAINER_NAME }}
+      PACKAGE_TAG: ${{ env.PACKAGE_TAG }}
 
     steps:
       - name: Azure Login
@@ -50,13 +53,17 @@ jobs:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Deploy to Azure Container Instances
+        env:
+          DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+          NODE_ENV: ${{ env.NODE_ENV }}
         run: |
           # choose resource group & container name based on branch
             RESOURCE_GROUP="discord-bots"
-            CONTAINER_NAME="${{ env.CONTAINER_NAME }}"
-            IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ env.PACKAGE_TAG }}
+            IMAGE_REF="ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${PACKAGE_TAG}"
 
           # delete previous
+          echo "Deleting previous container... $CONTAINER_NAME"
           az container delete \
             --resource-group "$RESOURCE_GROUP" \
             --name "$CONTAINER_NAME" \
@@ -75,8 +82,8 @@ jobs:
             --registry-username "${{ github.actor }}" \
             --registry-password "${{ secrets.GITHUB_TOKEN }}" \
             --environment-variables \
-              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
-              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
+              DISCORD_BOT_TOKEN="$DISCORD_BOT_TOKEN" \
+              DISCORD_CLIENT_ID="$DISCORD_CLIENT_ID" \
               NODE_ENV="production" \
               TERM="xterm-256color" \
               COLORTERM="24bit" \
