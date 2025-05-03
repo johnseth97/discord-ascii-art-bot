@@ -51,7 +51,7 @@ jobs:
       PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
       RG: discord-bots
       CA_ENV: discord-bots-aca-env
-      CONTAINER_APP_NAME: ${ vars.CONTAINER_APP_NAME }}
+      CONTAINER_APP_NAME: ${{ vars.CONTAINER_APP_NAME }}
       IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
     steps:
       - name: Azure Login
