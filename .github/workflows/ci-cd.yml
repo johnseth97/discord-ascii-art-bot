@@ -87,7 +87,7 @@ jobs:
           imageToDeploy: ${{ env.IMAGE_REF }}
           registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
-          registryPassword: ${{ secrets.ACTIONS_TOKEN }}
+          registryPassword: ${{ secrets.GITHUB_TOKEN }}
           environmentVariables: |
             DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
             DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
