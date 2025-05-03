@@ -11,23 +11,9 @@ let clientId: string;
 let guildId: string | undefined;
 let botToken: string;
 
-switch (ENV) {
-  case "production":
-    clientId = process.env.DISCORD_CLIENT_ID!;
-    botToken = process.env.DISCORD_BOT_TOKEN!;
-    // Global registration for production
-    break;
-  case "testing":
-    clientId = process.env.DISCORD_CLIENT_ID_TESTING!;
-    guildId = process.env.DISCORD_GUILD_ID_TESTING!;
-    botToken = process.env.DISCORD_BOT_TOKEN_TESTING!;
-    break;
-  case "development":
-  default:
-    clientId = process.env.DISCORD_CLIENT_ID_DEVELOPMENT!;
-    guildId = process.env.DISCORD_GUILD_ID_DEVELOPMENT!;
-    botToken = process.env.DISCORD_BOT_TOKEN_DEVELOPMENT!;
-}
+clientId = process.env.DISCORD_CLIENT_ID!;
+botToken = process.env.DISCORD_BOT_TOKEN!;
+guildId = process.env.DISCORD_GUILD_ID;
 
 // Load all command JSON
 const commands: any[] = [];

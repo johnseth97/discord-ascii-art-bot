@@ -4,9 +4,11 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    ports: []
     environment:
-      DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}
+      NODE_ENV: development
+      DISCORD_BOT_TOKEN:   ${DISCORD_BOT_TOKEN}
+      DISCORD_CLIENT_ID:   ${DISCORD_CLIENT_ID}
+      DISCORD_GUILD_ID:    ${DISCORD_GUILD_ID}
     volumes:
       - ./:/app
     command: npm run dev
