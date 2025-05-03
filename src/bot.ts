@@ -52,31 +52,43 @@ export async function startBot(): Promise<void> {
     verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY!),
     async (req, res) => {
       const interaction = req.body as APIInteraction;
-      // Ping
-      if (interaction.type === 1) return res.json({ type: 1 });
-      // Slash command
+
+      // 1) Ping
+      if (interaction.type === 1) {
+        res.json({ type: 1 });
+        return;
+      }
+
+      // 2) Slash command
       if (interaction.type === 2) {
         const name = interaction.data.name;
         const cmd = commands.find((c) => c.data.name === name);
+
         if (!cmd) {
-          return res.json({
+          res.json({
             type: 4,
             data: { content: "❌ Command not found." },
           });
+          return;
         }
+
         try {
           const response = await cmd.executeHTTP(interaction);
-          return res.json(response);
+          res.json(response);
+          return;
         } catch (err) {
           console.error(err);
-          return res.json({
+          res.json({
             type: 4,
             data: { content: "❌ Error executing command." },
           });
+          return;
         }
       }
-      // Unsupported
+
+      // 3) Unsupported
       res.sendStatus(400);
+      return;
     },
   );
 
