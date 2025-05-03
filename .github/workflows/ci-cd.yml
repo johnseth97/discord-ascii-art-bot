@@ -46,8 +46,8 @@ jobs:
     environment: Testing
     env:
       # bring the testing secrets into the step
-      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN_TESTING }}
-      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID_TESTING }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
       PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
       RG: discord-bots
       CA_ENV: discord-bots-aca-env
@@ -65,7 +65,7 @@ jobs:
           resourceGroup: ${{ env.RG }}
           containerAppName: ${{ env.CONTAINER_APP_NAME }}
           imageToDeploy: ${{ env.IMAGE_REF }}
-          registryServer: ghcr.io
+          registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
           registryPassword: ${{ secrets.GITHUB_TOKEN }}
           environmentVariables: |
