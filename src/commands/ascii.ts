@@ -70,6 +70,17 @@ export const data = new SlashCommandBuilder()
   )
   .addIntegerOption((opt: SlashCommandIntegerOption) =>
     opt.setName("width").setDescription("Max width in characters"),
+  )
+  // New options (snake_case)
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("save_bg")
+      .setDescription("Background RGBA for PNG/GIF, e.g. 255,255,255,100"),
+  )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt
+      .setName("color_bg")
+      .setDescription("Use color as background for ANSI text output"),
   );
 
 export async function execute(
@@ -100,12 +111,14 @@ export async function execute(
   const useColor = interaction.options.getBoolean("color") ?? false;
   const useComplex = interaction.options.getBoolean("complex") ?? false;
   const map = interaction.options.getString("map");
+  const saveBg = interaction.options.getString("save_bg");
+  const colorBg = interaction.options.getBoolean("color_bg") ?? false;
   const w = interaction.options.getInteger("width");
   const width = typeof w === "number" ? w : 80;
 
-  // Helper to build common flags
   const flags = [
     ...(useColor ? ["--color"] : []),
+    ...(colorBg && useColor ? ["--color-bg"] : []),
     ...(useBraille ? ["--braille"] : []),
     ...(useDither ? ["--dither"] : []),
     ...(useComplex ? ["--complex"] : []),
@@ -123,7 +136,14 @@ export async function execute(
     }
     const tmpDir = os.tmpdir();
     const outFile = path.join(tmpDir, `${id}-ascii-art.gif`);
-    const args = [inputPath, ...flags, "--save-gif", tmpDir, "--only-save"];
+    const args = [
+      inputPath,
+      ...flags,
+      "--save-gif",
+      tmpDir,
+      ...(saveBg ? ["--save-bg", saveBg] : []),
+      "--only-save",
+    ];
     const proc = spawn("ascii-image-converter", args, {
       env: {
         ...process.env,
@@ -139,8 +159,7 @@ export async function execute(
         if (code !== 0) {
           console.error("GIF conversion error:", stderr);
           await interaction.editReply({
-            content:
-              " GIF conversion failed! 😭 Not al GIFs are supported by the base tool, try a different one.",
+            content: "❌ GIF conversion failed or unsupported format.",
           });
           return;
         }
@@ -148,9 +167,7 @@ export async function execute(
         await interaction.editReply({ files: [{ attachment: outFile, name }] });
       } finally {
         await unlink(inputPath).catch(() => {});
-        await unlink(path.join(os.tmpdir(), `${id}-ascii-art.gif`)).catch(
-          () => {},
-        );
+        await unlink(outFile).catch(() => {});
       }
     });
     return;
@@ -159,7 +176,14 @@ export async function execute(
   if (output === "png") {
     const tmpDir = os.tmpdir();
     const outFile = path.join(tmpDir, `${id}-ascii-art.png`);
-    const args = [inputPath, ...flags, "--save-img", tmpDir, "--only-save"];
+    const args = [
+      inputPath,
+      ...flags,
+      "--save-img",
+      tmpDir,
+      ...(saveBg ? ["--save-bg", saveBg] : []),
+      "--only-save",
+    ];
     const proc = spawn("ascii-image-converter", args, {
       env: {
         ...process.env,
@@ -224,9 +248,7 @@ export async function execute(
         });
       } else {
         await interaction.editReply({
-          content: `\`\`\`ansi
-${colored}
-\`\`\``,
+          content: `\`\`\`ansi\n${colored}\n\`\`\``,
         });
       }
     } finally {
