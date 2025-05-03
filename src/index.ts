@@ -11,6 +11,9 @@ import fs from "fs";
 import path from "path";
 import * as os from "os";
 import { readdir, stat, unlink } from "fs/promises";
+import { healthcheck } from "./utils/healthcheck";
+
+healthcheck();
 
 if (process.env.NODE_ENV !== "production") {
   require("dotenv").config();

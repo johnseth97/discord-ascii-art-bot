@@ -1,0 +1,38 @@
+# containerapp.yaml
+apiVersion: '2024-05-01'
+kind: containerApp
+properties:
+  configuration:
+    ingress:
+      external: false
+      targetPort: 8080
+    registries:
+      - server: ghcr.io
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+    secrets:
+      - name: DISCORD_BOT_TOKEN
+        value: ${{ secrets.DISCORD_BOT_TOKEN }}
+      - name: DISCORD_CLIENT_ID
+        value: ${{ secrets.DISCORD_CLIENT_ID }}
+      - name: DISCORD_GUILD_ID
+        value: ${{ secrets.DISCORD_GUILD_ID }}
+    environmentVariables:
+      - name: DISCORD_BOT_TOKEN
+        secretRef: DISCORD_BOT_TOKEN
+      - name: DISCORD_CLIENT_ID
+        secretRef: DISCORD_CLIENT_ID
+      - name: DISCORD_GUILD_ID
+        secretRef: DISCORD_GUILD_ID
+      - name: NODE_ENV
+        value: ${{ env.NODE_ENV }}
+      - name: TERM
+        value: xterm-256color
+      - name: COLORTERM
+        value: 24bit
+      - name: FORCE_COLOR
+        value: '1'
+  template:
+    containers:
+      - name: ascii-art-bot
+        image: ${{ needs.build-and-push.outputs.image-ref }}

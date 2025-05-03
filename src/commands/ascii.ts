@@ -3,9 +3,9 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   SlashCommandAttachmentOption,
+  SlashCommandStringOption,
   SlashCommandBooleanOption,
   SlashCommandIntegerOption,
-  SlashCommandStringOption,
 } from "discord.js";
 import { spawn } from "child_process";
 import { download } from "../utils/download";
@@ -17,7 +17,18 @@ import { randomUUID } from "crypto";
 export const data = new SlashCommandBuilder()
   .setName("ascii")
   .setDescription(
-    "Convert an image to ASCII art or PNG representation. Provide either an attachment or a URL.",
+    "Convert an image to ASCII art (text, PNG, or GIF). Provide an attachment or URL.",
+  )
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("output")
+      .setDescription("Output format")
+      .addChoices(
+        { name: "Text (ANSI)", value: "text" },
+        { name: "PNG Image", value: "png" },
+        { name: "GIF Animation", value: "gif" },
+      )
+      .setRequired(true),
   )
   .addAttachmentOption((opt: SlashCommandAttachmentOption) =>
     opt
@@ -33,33 +44,43 @@ export const data = new SlashCommandBuilder()
   )
   .addStringOption((opt: SlashCommandStringOption) =>
     opt
-      .setName("output")
-      .setDescription("Output format")
-      .addChoices(
-        { name: "Text (ANSI)", value: "text" },
-        { name: "PNG Image", value: "png" },
-      ),
-  )
-  .addStringOption((opt: SlashCommandStringOption) =>
-    opt
       .setName("quality")
-      .setDescription("Quality mode: embedding or max resolution")
+      .setDescription("Quality mode for images")
       .addChoices(
-        { name: "Standard (embedded)", value: "standard" },
-        { name: "Max (no embed, full resolution)", value: "max" },
+        { name: "Standard", value: "standard" },
+        { name: "Max Resolution", value: "max" },
       ),
   )
   .addBooleanOption((opt: SlashCommandBooleanOption) =>
     opt.setName("braille").setDescription("Use braille characters"),
   )
   .addBooleanOption((opt: SlashCommandBooleanOption) =>
-    opt.setName("dither").setDescription("Apply dithering (for braille)"),
+    opt.setName("dither").setDescription("Apply dithering (braille only)"),
   )
   .addBooleanOption((opt: SlashCommandBooleanOption) =>
     opt.setName("color").setDescription("ANSI color output"),
   )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt
+      .setName("complex")
+      .setDescription("Use complex ascii characters for higher quality"),
+  )
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt.setName("map").setDescription("Custom ascii map (dark-to-light)"),
+  )
   .addIntegerOption((opt: SlashCommandIntegerOption) =>
     opt.setName("width").setDescription("Max width in characters"),
+  )
+  // New options (snake_case)
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("save_bg")
+      .setDescription("Background RGBA for PNG/GIF, e.g. 255,255,255,100"),
+  )
+  .addBooleanOption((opt: SlashCommandBooleanOption) =>
+    opt
+      .setName("color_bg")
+      .setDescription("Use color as background for ANSI text output"),
   );
 
 export async function execute(
@@ -67,7 +88,6 @@ export async function execute(
 ): Promise<void> {
   await interaction.deferReply();
 
-  // Require either attachment or URL
   const attachment = interaction.options.getAttachment("image");
   const urlString = interaction.options.getString("url");
   if (!attachment && !urlString) {
@@ -78,35 +98,52 @@ export async function execute(
   }
 
   const imageUrl = attachment?.url ?? urlString!;
-  const originalPath = await download(imageUrl);
-  const ext = path.extname(originalPath) || ".png";
+  const downloaded = await download(imageUrl);
+  const ext = path.extname(downloaded) || ".png";
   const id = randomUUID();
   const inputPath = path.join(os.tmpdir(), `${id}${ext}`);
-  await rename(originalPath, inputPath);
+  await rename(downloaded, inputPath);
 
-  const output = interaction.options.getString("output") ?? "text";
+  const output = interaction.options.getString("output")!;
   const quality = interaction.options.getString("quality") ?? "standard";
   const useBraille = interaction.options.getBoolean("braille") ?? false;
   const useDither = interaction.options.getBoolean("dither") ?? false;
   const useColor = interaction.options.getBoolean("color") ?? false;
+  const useComplex = interaction.options.getBoolean("complex") ?? false;
+  const map = interaction.options.getString("map");
+  const saveBg = interaction.options.getString("save_bg");
+  const colorBg = interaction.options.getBoolean("color_bg") ?? false;
   const w = interaction.options.getInteger("width");
   const width = typeof w === "number" ? w : 80;
 
-  if (output === "png") {
+  const flags = [
+    ...(useColor ? ["--color"] : []),
+    ...(colorBg && useColor ? ["--color-bg"] : []),
+    ...(useBraille ? ["--braille"] : []),
+    ...(useDither ? ["--dither"] : []),
+    ...(useComplex ? ["--complex"] : []),
+    ...(map ? ["--map", map] : []),
+    "--width",
+    width.toString(),
+  ];
+
+  if (output === "gif") {
+    if (!inputPath.toLowerCase().endsWith(".gif")) {
+      await interaction.editReply({
+        content: "❌ GIF output requires a .gif source file.",
+      });
+      return;
+    }
     const tmpDir = os.tmpdir();
-    const outputFile = path.join(tmpDir, `${id}-ascii-art.png`);
+    const outFile = path.join(tmpDir, `${id}-ascii-art.gif`);
     const args = [
       inputPath,
-      "--width",
-      width.toString(),
-      ...(useColor ? ["--color"] : []),
-      ...(useBraille ? ["--braille"] : []),
-      ...(useDither ? ["--dither"] : []),
-      "--save-img",
+      ...flags,
+      "--save-gif",
       tmpDir,
+      ...(saveBg ? ["--save-bg", saveBg] : []),
       "--only-save",
     ];
-
     const proc = spawn("ascii-image-converter", args, {
       env: {
         ...process.env,
@@ -117,7 +154,46 @@ export async function execute(
     });
     let stderr = "";
     proc.stderr.on("data", (chunk) => (stderr += chunk.toString()));
+    proc.on("close", async (code) => {
+      try {
+        if (code !== 0) {
+          console.error("GIF conversion error:", stderr);
+          await interaction.editReply({
+            content: "❌ GIF conversion failed or unsupported format.",
+          });
+          return;
+        }
+        const name = `${id}-ascii-art.gif`;
+        await interaction.editReply({ files: [{ attachment: outFile, name }] });
+      } finally {
+        await unlink(inputPath).catch(() => {});
+        await unlink(outFile).catch(() => {});
+      }
+    });
+    return;
+  }
 
+  if (output === "png") {
+    const tmpDir = os.tmpdir();
+    const outFile = path.join(tmpDir, `${id}-ascii-art.png`);
+    const args = [
+      inputPath,
+      ...flags,
+      "--save-img",
+      tmpDir,
+      ...(saveBg ? ["--save-bg", saveBg] : []),
+      "--only-save",
+    ];
+    const proc = spawn("ascii-image-converter", args, {
+      env: {
+        ...process.env,
+        TERM: "xterm-256color",
+        COLORTERM: "truecolor",
+        FORCE_COLOR: "1",
+      },
+    });
+    let stderr = "";
+    proc.stderr.on("data", (chunk) => (stderr += chunk.toString()));
     proc.on("close", async (code) => {
       try {
         if (code !== 0) {
@@ -129,28 +205,18 @@ export async function execute(
         }
         const base = `${id}-ascii-art.png`;
         const name = quality === "max" ? `SPOILER_${base}` : base;
-        await interaction.editReply({
-          files: [{ attachment: outputFile, name }],
-        });
+        await interaction.editReply({ files: [{ attachment: outFile, name }] });
       } finally {
         await unlink(inputPath).catch(() => {});
-        await unlink(path.join(os.tmpdir(), `${id}-ascii-art.png`)).catch(
-          () => {},
-        );
+        await unlink(outFile).catch(() => {});
       }
     });
     return;
   }
 
-  const argsText = [
-    inputPath,
-    "--width",
-    width.toString(),
-    ...(useColor ? ["--color"] : []),
-    ...(useBraille ? ["--braille"] : []),
-    ...(useDither ? ["--dither"] : []),
-  ];
-  const cmd = `ascii-image-converter ${argsText.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}`;
+  // Text/ANSI output
+  const cmdArgs = [inputPath, ...flags];
+  const cmd = `ascii-image-converter ${cmdArgs.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}`;
   const procText = spawn("script", ["-qfc", cmd, "/dev/null"], {
     env: {
       ...process.env,
@@ -159,7 +225,6 @@ export async function execute(
       FORCE_COLOR: "1",
     },
   });
-
   let stdout = "";
   let stderrText = "";
   procText.stdout.on("data", (chunk) => (stdout += chunk.toString()));

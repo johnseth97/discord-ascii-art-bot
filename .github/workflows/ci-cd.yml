@@ -5,6 +5,7 @@ name: CI/CD
 permissions:
   contents: read
   packages: write
+  id-token: write
 
 on:
   push:
@@ -35,48 +36,50 @@ jobs:
       - name: Build & Push Image
         run: |
           IMAGE=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ env.PACKAGE_TAG }}
-          docker build -f Dockerfile.prod -t $IMAGE .
+          docker build -f Dockerfile -t $IMAGE .
           docker push $IMAGE
+  
+  register-commands:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    env:
+      NODE_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'testing' }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Register Slash Commands
+        run: npm run deploy-commands
+
 
   deploy-to-aca:
     needs: build-and-push
     runs-on: ubuntu-latest
     environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
-    env:
-      # Core Discord bot creds—set in your GitHub Environment secrets
-      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
-      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
-
-      # Deployment parameters (vars or repo-level)
-      NODE_ENV: ${{ vars.NODE_ENV }}
-      PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
-      RG: discord-bots
-      CA_ENV: discord-bots-aca-env
-      CONTAINER_APP_NAME: ${{ vars.CONTAINER_APP_NAME }}
-      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
-
-      # Azure credentials (Environment secret)
-      AZURE_CREDENTIALS:   ${{ secrets.AZURE_CREDENTIALS }}
-
     steps:
-      - name: Deploy to Azure Container Apps
-        uses: azure/container-apps-deploy-action@v1
+      - name: Azure Login (OIDC)
+        uses: azure/login@v2
         with:
-          azureCredentials: ${{ env.AZURE_CREDENTIALS }}
-          resourceGroup: ${{ env.RG }}
-          containerAppEnvironment: ${{ env.CA_ENV }}
-          containerAppName: ${{ env.CONTAINER_APP_NAME }}
-          imageToDeploy: ${{ env.IMAGE_REF }}
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy to Azure Container Apps (v2)
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          # point at your repo + Dockerfile if you wanted to rebuild,
+          # but since you already pushed your image above, skip build:
+          imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
+          resourceGroup: discord-bots
+          containerAppName: ascii-art-bot-${{ github.ref_name }}
+          containerAppEnvironment: discord-bots-aca-env
+
+          # ensure it knows how to pull from GHCR
           registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
-          registryPassword: ${{ secrets.GITHUB_TOKEN }}
-          environmentVariables: |
-            DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
-            DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
-            DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
-            NODE_ENV=${{ env.NODE_ENV }}
-            TERM=xterm-256color
-            COLORTERM=24bit
-            FORCE_COLOR=1
-...
+          registryPassword: ${{ secrets.ACTION_TOKEN }}
+
+          # wire in your bot’s runtime vars
+          environment-variables: " DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }} DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} NODE_ENV=${{ github.ref_name }} TERM=xterm-256color COLORTERM=24bit FORCE_COLOR=1"
