@@ -56,39 +56,39 @@ jobs:
         run: npm run deploy-commands
 
 
-    deploy-to-aca:
-      needs: build-and-push
-      runs-on: ubuntu-latest
-      environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
-      steps:
-        - name: Azure Login (OIDC)
-          uses: azure/login@v1
-          with:
-            client-id: ${{ secrets.AZURE_CLIENT_ID }}
-            tenant-id: ${{ secrets.AZURE_TENANT_ID }}
-            subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+  deploy-to-aca:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    steps:
+      - name: Azure Login (OIDC)
+        uses: azure/login@v1
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
-        - name: Deploy to Azure Container Apps (v2)
-          uses: azure/container-apps-deploy-action@v2
-          with:
-            # point at your repo + Dockerfile if you wanted to rebuild,
-            # but since you already pushed your image above, skip build:
-            imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
-            resourceGroup: discord-bots
-            containerAppName: ascii-art-bot-${{ github.ref_name }}
-            containerAppEnvironment: discord-bots-aca-env
+      - name: Deploy to Azure Container Apps (v2)
+        uses: azure/container-apps-deploy-action@v2
+        with:
+          # point at your repo + Dockerfile if you wanted to rebuild,
+          # but since you already pushed your image above, skip build:
+          imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
+          resourceGroup: discord-bots
+          containerAppName: ascii-art-bot-${{ github.ref_name }}
+          containerAppEnvironment: discord-bots-aca-env
 
-            # ensure it knows how to pull from GHCR
-            registryUrl: ghcr.io
-            registryUsername: ${{ github.actor }}
-            registryPassword: ${{ secrets.GITHUB_TOKEN }}
+          # ensure it knows how to pull from GHCR
+          registryUrl: ghcr.io
+          registryUsername: ${{ github.actor }}
+          registryPassword: ${{ secrets.GITHUB_TOKEN }}
 
-            # wire in your bot’s runtime vars
-            environmentVariables: |
-              DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
-              DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
-              DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }}
-              NODE_ENV=${{ github.ref_name }}
-              TERM=xterm-256color
-              COLORTERM=24bit
-              FORCE_COLOR=1
+          # wire in your bot’s runtime vars
+          environmentVariables: |
+            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
+            DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }}
+            NODE_ENV=${{ github.ref_name }}
+            TERM=xterm-256color
+            COLORTERM=24bit
+            FORCE_COLOR=1
