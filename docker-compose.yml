@@ -11,6 +11,8 @@ services:
       DISCORD_GUILD_ID: ${DISCORD_GUILD_ID}
     volumes:
       - ./:/app
+    ports:
+      - "8080:8080"
     command: >
       sh -c "npm run deploy-commands &&
              npm run dev"

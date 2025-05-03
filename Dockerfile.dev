@@ -24,6 +24,9 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
+# Expose the port the app runs on
+EXPOSE 8080
+
 # dev vs prod entrypoint
 # for local development with live‐reload:
 CMD ["npm", "run", "dev"]

@@ -1,23 +1,40 @@
 // src/index.ts
-
 import "dotenv/config";
-import { healthcheck } from "./utils/healthcheck";
-import { startBot } from "./bot";
+import express from "express";
+import { logger } from "./utils/logger"; // ← import logger
 
-/**
- * Application entry point.
- * - Runs the healthcheck HTTP server (for Container Apps).
- * - Bootstraps and starts the Discord bot.
- */
+import { registerCommands } from "./bot";
+import { healthRouter } from "./routes/health";
+import { interactionsRouter } from "./routes/interactions";
 
-healthcheck();
-
-(async () => {
+async function main() {
+  // 1) Register slash‑commands
   try {
-    await startBot();
-    console.log("Bot started successfully.");
+    await registerCommands();
+    logger.info("Discord commands registered"); // ← use logger
   } catch (err) {
-    console.error("Failed to start bot:", err);
+    logger.error("Failed to register commands:", err); // ← use logger
     process.exit(1);
   }
-})();
+
+  // 2) Spin up Express
+  const app = express();
+  const port = Number(process.env.PORT) || 8080;
+
+  app.use(express.json());
+
+  app.use("/health", healthRouter);
+  app.use("/interactions", interactionsRouter);
+
+  // Optional root
+  app.get("/", (_req, res) => {
+    res.status(200).send("OK");
+    logger.debug("🌳 Root endpoint hit"); // ← use logger
+  });
+
+  app.listen(port, () => {
+    logger.info(`HTTP server listening on port ${port}`); // ← use logger
+  });
+}
+
+main();
