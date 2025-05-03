@@ -3,9 +3,9 @@ import {
   SlashCommandBuilder,
   ChatInputCommandInteraction,
   SlashCommandAttachmentOption,
+  SlashCommandStringOption,
   SlashCommandBooleanOption,
   SlashCommandIntegerOption,
-  SlashCommandStringOption,
 } from "discord.js";
 import { spawn } from "child_process";
 import { download } from "../utils/download";
@@ -19,6 +19,18 @@ export const data = new SlashCommandBuilder()
   .setDescription(
     "Convert an image to ASCII art or PNG representation. Provide either an attachment or a URL.",
   )
+  // Required options first
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("output")
+      .setDescription("Output format: text or png")
+      .addChoices(
+        { name: "Text (ANSI)", value: "text" },
+        { name: "PNG Image", value: "png" },
+      )
+      .setRequired(true),
+  )
+  // Optional inputs
   .addAttachmentOption((opt: SlashCommandAttachmentOption) =>
     opt
       .setName("image")
@@ -30,15 +42,6 @@ export const data = new SlashCommandBuilder()
       .setName("url")
       .setDescription("Direct link to an image to convert")
       .setRequired(false),
-  )
-  .addStringOption((opt: SlashCommandStringOption) =>
-    opt
-      .setName("output")
-      .setDescription("Output format")
-      .addChoices(
-        { name: "Text (ANSI)", value: "text" },
-        { name: "PNG Image", value: "png" },
-      ),
   )
   .addStringOption((opt: SlashCommandStringOption) =>
     opt
@@ -84,7 +87,7 @@ export async function execute(
   const inputPath = path.join(os.tmpdir(), `${id}${ext}`);
   await rename(originalPath, inputPath);
 
-  const output = interaction.options.getString("output") ?? "text";
+  const output = interaction.options.getString("output")!;
   const quality = interaction.options.getString("quality") ?? "standard";
   const useBraille = interaction.options.getBoolean("braille") ?? false;
   const useDither = interaction.options.getBoolean("dither") ?? false;
@@ -93,6 +96,7 @@ export async function execute(
   const width = typeof w === "number" ? w : 80;
 
   if (output === "png") {
+    // PNG output
     const tmpDir = os.tmpdir();
     const outputFile = path.join(tmpDir, `${id}-ascii-art.png`);
     const args = [
@@ -129,19 +133,20 @@ export async function execute(
         }
         const base = `${id}-ascii-art.png`;
         const name = quality === "max" ? `SPOILER_${base}` : base;
+        // Send the file, then cleanup
         await interaction.editReply({
           files: [{ attachment: outputFile, name }],
         });
       } finally {
+        // cleanup after upload
         await unlink(inputPath).catch(() => {});
-        await unlink(path.join(os.tmpdir(), `${id}-ascii-art.png`)).catch(
-          () => {},
-        );
+        await unlink(outputFile).catch(() => {});
       }
     });
     return;
   }
 
+  // Text/ANSI output
   const argsText = [
     inputPath,
     "--width",
@@ -150,7 +155,9 @@ export async function execute(
     ...(useBraille ? ["--braille"] : []),
     ...(useDither ? ["--dither"] : []),
   ];
-  const cmd = `ascii-image-converter ${argsText.map((a) => (a.includes(" ") ? `"${a}"` : a)).join(" ")}`;
+  const cmd = `ascii-image-converter ${argsText
+    .map((a) => (a.includes(" ") ? `"${a}"` : a))
+    .join(" ")}`;
   const procText = spawn("script", ["-qfc", cmd, "/dev/null"], {
     env: {
       ...process.env,
@@ -183,7 +190,9 @@ export async function execute(
         });
       } else {
         await interaction.editReply({
-          content: `\`\`\`ansi\n${colored}\n\`\`\``,
+          content: `\`\`\`ansi
+${colored}
+\`\`\``,
         });
       }
     } finally {

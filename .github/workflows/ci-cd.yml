@@ -37,6 +37,23 @@ jobs:
           IMAGE=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ env.PACKAGE_TAG }}
           docker build -f Dockerfile.prod -t $IMAGE .
           docker push $IMAGE
+  
+  register-commands:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    env:
+      NODE_ENV: ${{ github.ref == 'refs/heads/main' && 'production' || 'testing' }}
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: npm ci
+      - name: Register Slash Commands
+        run: npm run deploy-commands
+
 
   deploy-to-aca:
     needs: build-and-push
