@@ -8,20 +8,23 @@ permissions:
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
+      - testing
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    environment:
-      name: Production
+    # Use the branch name to select the environment
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    env:
+      PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
     outputs:
-      image-ref: ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
+      image-ref: ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ vars.PACKAGE_TAG }}
 
     steps:
       - uses: actions/checkout@v4
 
-      # Log in to GHCR
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v2
         with:
@@ -29,56 +32,56 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # Build & push
       - name: Build and push Docker image
         run: |
-          IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
+          IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${PACKAGE_TAG}
           docker build -f Dockerfile.prod -t $IMAGE_REF .
           docker push $IMAGE_REF
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy-to-aci:
+  deploy-to-aca:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment:
-      name: Production
-
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+    env:
+      # Declaring both production and testing environment variables
+      # NODE_ENV will determine which environment to use
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      NODE_ENV: ${{ vars.NODE_ENV }}
+      PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
+      RG: discord-bots
+      CA_ENV: discord-bots-aca-env
+      CONTAINER_APP_NAME: ${{ vars.CONTAINER_APP_NAME }}
+      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
+      ACTIONS_TOKEN: ${{ secrets.ACTIONS_TOKEN }}
     steps:
       - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Container Instances
-        run: |
-          RESOURCE_GROUP="discord-bots"
-          CONTAINER_NAME="ascii-art-bot"
-          IMAGE_REF=ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:latest
-
-          # If the container group already exists, delete it first:
-          az container delete \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$CONTAINER_NAME" \
-            --yes || true
-
-          # Create/update container instance
-          az container create \
-            --resource-group "$RESOURCE_GROUP" \
-            --name "$CONTAINER_NAME" \
-            --image "$IMAGE_REF" \
-            --os-type Linux \
-            --cpu 1 \
-            --memory 1.5 \
-            --restart-policy OnFailure \
-            --registry-login-server ghcr.io \
-            --registry-username "${{ github.actor }}" \
-            --registry-password "${{ secrets.GITHUB_TOKEN }}" \
-            --environment-variables \
-              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
-              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
-              NODE_ENV="production" \
-              TERM="xterm-256color" \
-              COLORTERM="24bit" \
-              FORCE_COLOR="1"
-...
+      - name: Deploy to Azure Container Apps
+        uses: azure/container-apps-deploy-action@v1
+        with:
+          azureCredentials: ${{ env.AZURE_CREDENTIALS }}
+          resourceGroup: ${{ env.RG }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          containerAppEnvironment: ${{ env.CA_ENV }}
+          imageToDeploy: ${{ env.IMAGE_REF }}
+          registryUrl: ghcr.io
+          registryUsername: johnseth97
+          registryPassword: ${{ env.ACTIONS_TOKEN }}
+          environmentVariables: |
+             DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
+             DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
+             DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
+             DISCORD_BOT_TOKEN_TESTING=${{ env.DISCORD_BOT_TOKEN }}
+             DISCORD_CLIENT_ID_TESTING=${{ env.DISCORD_CLIENT_ID }}
+             DISCORD_GUILD_ID_TESTING=${{ env.DISCORD_GUILD_ID }}
+             NODE_ENV=${{ env.NODE_ENV }}
+             TERM=xterm-256color
+             COLORTERM=24bit
+             FORCE_COLOR=1
