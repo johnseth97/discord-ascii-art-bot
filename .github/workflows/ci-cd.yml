@@ -43,7 +43,7 @@ jobs:
   deploy-to-aca:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: Testing
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
     env:
       # Declaring both production and testing environment variables
       # NODE_ENV will determine which environment to use
