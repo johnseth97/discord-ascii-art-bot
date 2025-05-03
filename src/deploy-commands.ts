@@ -17,7 +17,7 @@ switch (ENV) {
     botToken = process.env.DISCORD_BOT_TOKEN!;
     // Global registration for production
     break;
-  case "test":
+  case "testing":
     clientId = process.env.DISCORD_CLIENT_ID_TESTING!;
     guildId = process.env.DISCORD_GUILD_ID_TESTING!;
     botToken = process.env.DISCORD_BOT_TOKEN_TESTING!;
