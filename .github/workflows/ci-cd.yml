@@ -82,4 +82,4 @@ jobs:
           registryPassword: ${{ secrets.ACTION_TOKEN }}
 
           # wire in your bot’s runtime vars
-          environment-variables: " DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }} DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} DISCORD_PUBLIC_KEY=${{ secrets.DISCORD_PUBLIC_KEY }} NODE_ENV=${{ github.ref_name }} TERM=xterm-256color COLORTERM=24bit FORCE_COLOR=1"
+          environmentVariables: " DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }} DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} DISCORD_PUBLIC_KEY=${{ secrets.DISCORD_PUBLIC_KEY }} NODE_ENV=${{ github.ref_name }} TERM=xterm-256color COLORTERM=24bit FORCE_COLOR=1"
