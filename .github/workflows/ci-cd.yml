@@ -82,7 +82,7 @@ jobs:
           registryPassword: ${{ secrets.GITHUB_TOKEN }}
 
           # wire in your bot’s runtime vars
-          environmentVariables: |
+          environment-variables: |
             DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
             DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
             DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }}
