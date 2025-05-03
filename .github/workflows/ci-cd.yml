@@ -92,8 +92,5 @@ jobs:
             DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }} \
             DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }} \
             DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }} \
-            NODE_ENV=${{ env.NODE_ENV }} \
-            TERM=xterm-256color \
-            COLORTERM=24bit \
-            FORCE_COLOR=1 \
+            NODE_ENV=${{ env.NODE_ENV }} 
 ...

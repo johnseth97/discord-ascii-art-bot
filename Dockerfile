@@ -12,6 +12,9 @@ RUN npm run build
 FROM node:20-slim AS runtime
 WORKDIR /app
 
+ENV COLORTERM=24bit
+ENV TERM=xterm-256color
+
 # Install system dependencies and ascii-image-converter
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
