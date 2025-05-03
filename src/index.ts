@@ -1,3 +1,4 @@
+// index.ts
 import {
   Client,
   GatewayIntentBits,
@@ -12,7 +13,10 @@ import * as os from "os";
 import { readdir, stat, unlink } from "fs/promises";
 
 if (process.env.NODE_ENV !== "production") {
-  import("dotenv").then((dotenv) => dotenv.config());
+  require("dotenv").config();
+  console.log("Loaded .env file");
+  console.log("Environment:", process.env.NODE_ENV);
+  console.log("Client ID:", process.env.DISCORD_CLIENT_ID);
 }
 
 // Extend Client to include commands
