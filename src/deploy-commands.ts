@@ -1,34 +1,21 @@
+// src/deploy-commands.ts
+import "dotenv/config";
 import { REST, Routes } from "discord.js";
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { loadCommands } from "./services/command-loader";
 
 // Determine environment
-const ENV = process.env.NODE_ENV || "development";
-let clientId: string;
-let guildId: string | undefined;
-let botToken: string;
+const ENV = process.env.NODE_ENV ?? "development";
+const clientId = process.env.DISCORD_CLIENT_ID!;
+const guildId =
+  ENV === "production" ? undefined : process.env.DISCORD_GUILD_ID!;
 
-clientId = process.env.DISCORD_CLIENT_ID!;
-botToken = process.env.DISCORD_BOT_TOKEN!;
-guildId = process.env.DISCORD_GUILD_ID;
+// Load all commands via our service
+const commandModules = loadCommands();
+const commands = commandModules.map((cmd) => cmd.data);
 
-// Load all command JSON
-const commands: any[] = [];
-const commandsPath = path.join(__dirname, "commands");
-for (const file of fs.readdirSync(commandsPath)) {
-  if (file.endsWith(".js") || file.endsWith(".ts")) {
-    const command = require(path.join(commandsPath, file));
-    if (command.data) {
-      commands.push(command.data.toJSON());
-    }
-  }
-}
-
-const token = botToken;
-const rest = new REST({ version: "10" }).setToken(token);
+const rest = new REST({ version: "10" }).setToken(
+  process.env.DISCORD_BOT_TOKEN!,
+);
 
 (async () => {
   try {
