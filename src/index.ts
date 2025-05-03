@@ -11,7 +11,7 @@ import fs from "fs";
 import path from "path";
 import * as os from "os";
 import { readdir, stat, unlink } from "fs/promises";
-import { healthcheck } from "./utils/healthcheck.js";
+import { healthcheck } from "./utils/healthcheck";
 
 healthcheck();
 
