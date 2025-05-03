@@ -46,6 +46,12 @@ export async function startBot(): Promise<void> {
   const app = express();
   app.use(express.json());
 
+  // 1️⃣ Allow Discord's URL verifier to GET /interactions
+  app.get("/interactions", (_req, res) => {
+    // Any 200 will do
+    res.send("OK");
+  });
+
   // Verify Discord signature
   app.post(
     "/interactions",
