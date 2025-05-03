@@ -1,55 +1,42 @@
 // src/services/command-loader.ts
 import fs from "fs";
 import path from "path";
+import type { RESTPostAPIApplicationCommandsJSONBody } from "discord-api-types/v10";
 import type {
   APIInteraction,
   APIInteractionResponse,
 } from "discord-api-types/v10";
-import type { RESTPostAPIApplicationCommandsJSONBody } from "discord-api-types/v10";
 
-/**
- * A single slash-command module interface.
- */
+// Matches modules exporting { data, executeHTTP }
 export interface CommandModule {
   data: RESTPostAPIApplicationCommandsJSONBody;
   executeHTTP(interaction: APIInteraction): Promise<APIInteractionResponse>;
 }
 
-/**
- * Recursively traverses the commands directory and loads every module that
- * exports a `data` builder and an `executeHTTP` handler.
- */
 export function loadCommands(): CommandModule[] {
-  const commandsDir = path.join(__dirname, "..", "commands");
-  const modules: CommandModule[] = [];
+  const commandsPath = path.join(__dirname, "../commands");
 
-  function traverse(dir: string) {
-    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-      const fullPath = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        traverse(fullPath);
-      } else if (
-        entry.isFile() &&
-        (entry.name.endsWith(".js") || entry.name.endsWith(".ts"))
-      ) {
-        // Dynamically require each command file
-        // eslint-disable-next-line @typescript-eslint/no-var-requires
-        const mod = require(fullPath) as {
-          data: { toJSON(): RESTPostAPIApplicationCommandsJSONBody };
-          executeHTTP: (
-            interaction: APIInteraction,
-          ) => Promise<APIInteractionResponse>;
-        };
-        if (mod.data && typeof mod.executeHTTP === "function") {
-          modules.push({
-            data: mod.data.toJSON(),
-            executeHTTP: mod.executeHTTP,
-          });
-        }
-      }
+  // Include both .ts and .js files, skip backups
+  const files = fs
+    .readdirSync(commandsPath)
+    .filter(
+      (f) => !f.endsWith(".bak") && (f.endsWith(".ts") || f.endsWith(".js")),
+    );
+
+  console.debug("loadCommands: found files", files);
+
+  const commands: CommandModule[] = [];
+  for (const file of files) {
+    const filePath = path.join(commandsPath, file);
+    // Dynamically require the module
+    const mod = require(filePath) as Partial<CommandModule>;
+
+    if (mod.data && typeof mod.executeHTTP === "function") {
+      commands.push(mod as CommandModule);
+    } else {
+      console.warn(`Skipping invalid command file: ${file}`);
     }
   }
 
-  traverse(commandsDir);
-  return modules;
+  return commands;
 }

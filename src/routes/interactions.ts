@@ -1,5 +1,4 @@
 import { Router, Request, Response, NextFunction } from "express";
-import { verifyKeyMiddleware } from "discord-interactions";
 import type {
   APIInteraction,
   APIInteractionResponse,
@@ -8,7 +7,6 @@ import { loadCommands } from "../services/command-loader";
 import { logger } from "../utils/logger"; // ← import your logger
 
 const commands = loadCommands();
-const verify = verifyKeyMiddleware(process.env.DISCORD_PUBLIC_KEY!) as any;
 
 export const interactionsRouter = Router();
 
@@ -28,7 +26,6 @@ interactionsRouter.get("/", (req: Request, res: Response) => {
 // the existing POST handler
 interactionsRouter.post(
   "/",
-  verify,
   async (
     req: Request<{}, any, APIInteraction>,
     res: Response<any>,
@@ -48,6 +45,10 @@ interactionsRouter.post(
       }
 
       if (interaction.type === 2) {
+        logger.debug(
+          "🗒️ Loaded commands:",
+          commands.map((c) => c.data.name),
+        );
         const cmd = commands.find((c) => c.data.name === interaction.data.name);
         if (!cmd) {
           res.json({ type: 4, data: { content: "❌ Command not found." } });

@@ -1,102 +1,127 @@
-// src/commands/ascii.ts
-
+// === src/commands/ascii.ts ===
 import { SlashCommandBuilder } from "@discordjs/builders";
 import type {
-  APIInteraction,
+  APIChatInputApplicationCommandInteraction,
   APIInteractionResponse,
+  APIApplicationCommandInteractionDataSubcommandOption,
 } from "discord-api-types/v10";
-import { spawn } from "child_process";
-import { download } from "../utils/download";
-import * as os from "os";
-import * as path from "path";
-import { rename, writeFile, unlink } from "fs/promises";
-import { randomUUID } from "crypto";
+import { ApplicationCommandOptionType } from "discord-api-types/v10";
+import { downloadImage } from "../utils/download";
+import { handleSaveTxt } from "./save-txt";
+import { handleSaveImg } from "./save-img";
+import { handleSaveGif } from "./save-gif";
 
-/**
- * ASCII Command: converts images to text, PNG, or GIF via ascii-image-converter.
- */
+// Top-level /ascii command with three subcommands
 export const data = new SlashCommandBuilder()
   .setName("ascii")
-  .setDescription(
-    "Convert an image to ASCII art (text, PNG, or GIF). Provide an attachment or URL.",
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("output")
-      .setDescription("Output format")
-      .setRequired(true)
-      .addChoices(
-        { name: "Text (ANSI)", value: "text" },
-        { name: "PNG Image", value: "png" },
-        { name: "GIF Animation", value: "gif" },
+  .setDescription("Convert images to ASCII art: text, PNG, or GIF")
+  .addSubcommand((sub) =>
+    sub
+      .setName("txt")
+      .setDescription("ANSI/text output")
+      .addStringOption((o) => o.setName("url").setDescription("Image URL"))
+      .addAttachmentOption((o) =>
+        o.setName("image").setDescription("Upload an image"),
+      )
+      .addIntegerOption((o) => o.setName("width").setDescription("Max width"))
+      .addBooleanOption((o) =>
+        o.setName("braille").setDescription("Use braille"),
+      )
+      .addBooleanOption((o) =>
+        o.setName("dither").setDescription("Apply dithering"),
+      )
+      .addStringOption((o) =>
+        o.setName("bg").setDescription("Background color"),
       ),
   )
-  .addAttachmentOption((opt) =>
-    opt
-      .setName("image")
-      .setDescription("Upload an image to convert")
-      .setRequired(false),
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("url")
-      .setDescription("Direct link to an image to convert")
-      .setRequired(false),
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("quality")
-      .setDescription("Quality mode for images")
-      .addChoices(
-        { name: "Standard", value: "standard" },
-        { name: "Max Resolution", value: "max" },
+  .addSubcommand((sub) =>
+    sub
+      .setName("img")
+      .setDescription("Generate a PNG of ASCII art")
+      .addStringOption((o) => o.setName("url").setDescription("Image URL"))
+      .addAttachmentOption((o) =>
+        o.setName("image").setDescription("Upload an image"),
+      )
+      .addIntegerOption((o) => o.setName("width").setDescription("Max width"))
+      .addBooleanOption((o) =>
+        o.setName("braille").setDescription("Use braille"),
+      )
+      .addBooleanOption((o) =>
+        o.setName("dither").setDescription("Apply dithering"),
+      )
+      .addBooleanOption((o) =>
+        o.setName("color").setDescription("ANSI color palette"),
+      )
+      .addStringOption((o) =>
+        o.setName("bg").setDescription("Background color"),
       ),
   )
-  .addBooleanOption((opt) =>
-    opt.setName("braille").setDescription("Use braille characters"),
+  .addSubcommand((sub) =>
+    sub
+      .setName("gif")
+      .setDescription("Generate a GIF animation of ASCII art")
+      .addStringOption((o) => o.setName("url").setDescription("Image URL"))
+      .addAttachmentOption((o) =>
+        o.setName("image").setDescription("Upload an image"),
+      )
+      .addIntegerOption((o) => o.setName("width").setDescription("Max width"))
+      .addBooleanOption((o) =>
+        o.setName("braille").setDescription("Use braille"),
+      )
+      .addBooleanOption((o) =>
+        o.setName("dither").setDescription("Apply dithering"),
+      )
+      .addBooleanOption((o) =>
+        o.setName("color").setDescription("ANSI color palette"),
+      )
+      .addStringOption((o) =>
+        o.setName("bg").setDescription("Background color"),
+      ),
   )
-  .addBooleanOption((opt) =>
-    opt.setName("dither").setDescription("Apply dithering (braille only)"),
-  )
-  .addBooleanOption((opt) =>
-    opt.setName("color").setDescription("ANSI color output"),
-  )
-  .addBooleanOption((opt) =>
-    opt
-      .setName("complex")
-      .setDescription("Use complex ascii characters for higher quality"),
-  )
-  .addStringOption((opt) =>
-    opt.setName("map").setDescription("Custom ascii map (dark-to-light)"),
-  )
-  .addIntegerOption((opt) =>
-    opt.setName("width").setDescription("Max width in characters"),
-  )
-  .addStringOption((opt) =>
-    opt
-      .setName("save_bg")
-      .setDescription("Background RGBA for PNG/GIF, e.g. 255,255,255,100"),
-  )
-  .addBooleanOption((opt) =>
-    opt
-      .setName("color_bg")
-      .setDescription("Use color as background for ANSI text output"),
-  );
+  .toJSON();
 
-/**
- * HTTP handler for the ascii command. Returns an InteractionResponse JSON.
- */
 export async function executeHTTP(
-  interaction: APIInteraction,
+  interaction: APIChatInputApplicationCommandInteraction,
 ): Promise<APIInteractionResponse> {
-  // TODO: extract options from interaction.data.options, download image, run converter,
-  // and construct a response. For complex flows you may need to send a deferred response
-  // (type=5) and then follow up via the webhook API.
+  // Find subcommand
+  const sub = interaction.data.options?.find(
+    (o): o is APIApplicationCommandInteractionDataSubcommandOption =>
+      o.type === ApplicationCommandOptionType.Subcommand,
+  );
+  const subName = sub?.name;
 
-  return {
-    type: 4,
-    data: {
-      content: "⏳ Processing your ASCII conversion... (not yet implemented)",
-    },
-  };
+  // Shared image resolution
+  let imageUrl: string | undefined;
+  if (interaction.data.resolved?.attachments) {
+    const atts = Object.values(interaction.data.resolved.attachments);
+    if (atts.length) imageUrl = atts[0].url;
+  }
+  if (!imageUrl) {
+    const urlOpt = sub?.options?.find((o) => o.name === "url" && "value" in o);
+    if (urlOpt) imageUrl = urlOpt.value as string;
+  }
+  if (!imageUrl) {
+    return { type: 4, data: { content: "❌ No image provided." } };
+  }
+
+  // Download image once
+  let inputPath: string;
+  try {
+    inputPath = await downloadImage(imageUrl);
+  } catch (err) {
+    console.error("Download failed:", err);
+    return { type: 4, data: { content: "❌ Failed to download image." } };
+  }
+
+  // Delegate to specific handlers
+  switch (subName) {
+    case "txt":
+      return handleSaveTxt(interaction, inputPath);
+    case "img":
+      return handleSaveImg(interaction, inputPath);
+    case "gif":
+      return handleSaveGif(interaction, inputPath);
+    default:
+      return { type: 4, data: { content: "❌ Unknown subcommand." } };
+  }
 }
