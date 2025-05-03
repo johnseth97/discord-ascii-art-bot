@@ -89,11 +89,36 @@ jobs:
           registryUsername: ${{ github.actor }}
           registryPassword: ${{ secrets.GITHUB_TOKEN }}
           environmentVariables: |
-            DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
-            DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
-            DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
+            DISCORD_BOT_TOKEN=secreterf:${{ env.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID=secretref:${{ env.DISCORD_CLIENT_ID }}
+            DISCORD_GUILD_ID=secretref:${{ env.DISCORD_GUILD_ID }}
             NODE_ENV=${{ env.NODE_ENV }}
             TERM=xterm-256color
             COLORTERM=24bit
             FORCE_COLOR=1
+
+      - name: Ensure env vars & secrets are set
+        shell: bash
+        run: |
+          # 1) Push your Discord creds in as named secrets
+          az containerapp update \
+            --resource-group ${{ env.RG }} \
+            --name          ${{ env.CONTAINER_APP_NAME }} \
+            --secrets \
+              DISCORD_BOT_TOKEN="${{ secrets.DISCORD_BOT_TOKEN }}" \
+              DISCORD_CLIENT_ID="${{ secrets.DISCORD_CLIENT_ID }}" \
+              DISCORD_GUILD_ID="${{ secrets.DISCORD_GUILD_ID }}"
+
+          # 2) Reference those secrets (and plain vars) in your container’s environment
+          az containerapp update \
+            --resource-group ${{ env.RG }} \
+            --name          ${{ env.CONTAINER_APP_NAME }} \
+            --environment-variables \
+              DISCORD_BOT_TOKEN=secretref:DISCORD_BOT_TOKEN \
+              DISCORD_CLIENT_ID=secretref:DISCORD_CLIENT_ID \
+              DISCORD_GUILD_ID=secretref:DISCORD_GUILD_ID \
+              NODE_ENV=${{ env.NODE_ENV }} \
+              TERM=xterm-256color \
+              COLORTERM=24bit \
+              FORCE_COLOR=1
 ...
