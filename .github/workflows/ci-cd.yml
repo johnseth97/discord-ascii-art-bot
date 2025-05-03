@@ -74,7 +74,7 @@ jobs:
           imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
           resourceGroup: discord-bots
           containerAppName: ascii-art-bot-$${ vars.PACKAGE_TAG }}
-          containerAppEnvironment: discord-bots-aca-env
+          containerAppEnvironment: managedEnvironment-discordbots-acc2
 
           # ensure it knows how to pull from GHCR
           registryUrl: ghcr.io
