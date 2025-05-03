@@ -62,15 +62,15 @@ jobs:
           containerAppName: ${{ vars.CONTAINER_NAME }}
 
           # Tell it to deploy your GHCR image + tag
-          imageToDeploy: ghcr.io/${{ github.repository_owner }}/discord-ascii-art-bot:${{ vars.PACKAGE_TAG }}
+          imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
 
           # Since this is GHCR (not ACR), provide registry creds
           acrUsername: ${{ github.actor }}
           acrPassword: ${{ secrets.GITHUB_TOKEN }}
-        env: |
-          DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
-          DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
-          NODE_ENV=${{ vars.NODE_ENV }}
-          TERM=xterm-256color
-          COLORTERM=24bit
-          FORCE_COLOR=1
+          environmentVariables: |
+            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
+            NODE_ENV=${{ vars.NODE_ENV }}
+            TERM=xterm-256color
+            COLORTERM=24bit
+            FORCE_COLOR=1
