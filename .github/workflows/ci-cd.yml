@@ -56,6 +56,7 @@ jobs:
       CA_ENV: discord-bots-aca-env
       CONTAINER_APP_NAME: ${{ vars.CONTAINER_APP_NAME }}
       IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
+      ACTIONS_TOKEN: ${{ secrets.ACTIONS_TOKEN }}
     steps:
       - name: Azure Login
         uses: azure/login@v1
@@ -72,14 +73,14 @@ jobs:
           imageToDeploy: ${{ env.IMAGE_REF }}
           registryUrl: ghcr.io
           registryUsername: johnseth97
-          registryPassword: ${{ secrets.ACTIONS_TOKEN }}
+          registryPassword: ${{ env.ACTIONS_TOKEN }}
           environmentVariables: |
              DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
              DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
              DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
-             DISCORD_BOT_TOKEN_TESTING=${{ secrets.DISCORD_BOT_TOKEN }}
-             DISCORD_CLIENT_ID_TESTING=${{ secrets.DISCORD_CLIENT_ID }}
-             DISCORD_GUILD_ID_TESTING=${{ secrets.DISCORD_GUILD_ID }}
+             DISCORD_BOT_TOKEN_TESTING=${{ env.DISCORD_BOT_TOKEN }}
+             DISCORD_CLIENT_ID_TESTING=${{ env.DISCORD_CLIENT_ID }}
+             DISCORD_GUILD_ID_TESTING=${{ env.DISCORD_GUILD_ID }}
              NODE_ENV=${{ env.NODE_ENV }}
              TERM=xterm-256color
              COLORTERM=24bit
