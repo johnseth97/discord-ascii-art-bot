@@ -1,7 +1,9 @@
 version: "3.8"
 services:
   ascii-art-bot-dev:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
     ports: []
     environment:
       DISCORD_BOT_TOKEN: ${DISCORD_BOT_TOKEN}

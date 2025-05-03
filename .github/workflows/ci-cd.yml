@@ -48,6 +48,8 @@ jobs:
       # bring the testing secrets into the step
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
       DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID }}
+      DISCORD_GUILD_ID: ${{ secrets.DISCORD_GUILD_ID }}
+      NODE_ENV: ${{ vars.NODE_ENV }}
       PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
       RG: discord-bots
       CA_ENV: discord-bots-aca-env
@@ -71,7 +73,11 @@ jobs:
           environmentVariables: |
             DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
             DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
-            NODE_ENV=production
+            DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
+            DISCORD_BOT_TOKEN_TESTING=${{ secrets.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID_TESTING=${{ secrets.DISCORD_CLIENT_ID }}
+            DISCORD_GUILD_ID_TESTING=${{ secrets.DISCORD_GUILD_ID }}
+            NODE_ENV=${{ env.NODE_ENV }}
             TERM=xterm-256color
             COLORTERM=24bit
             FORCE_COLOR=1
