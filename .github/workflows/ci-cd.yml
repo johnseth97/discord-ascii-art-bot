@@ -88,9 +88,9 @@ jobs:
           registryUrl: ghcr.io
           registryUsername: ${{ github.actor }}
           registryPassword: ${{ secrets.GITHUB_TOKEN }}
-          environmentVariables: \
-            DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }} \
-            DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }} \
-            DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }} \
-            NODE_ENV=${{ env.NODE_ENV }} 
+          environmentVariables: |
+            DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
+            DISCORD_GUILD_ID=${{ env.DISCORD_GUILD_ID }}
+            NODE_ENV=${{ env.NODE_ENV }}
 ...
