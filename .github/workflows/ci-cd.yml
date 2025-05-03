@@ -66,20 +66,10 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Deploy to Azure Container Apps (v2)
+      - name: Deploy via YAML manifest
         uses: azure/container-apps-deploy-action@v2
         with:
-          # point at your repo + Dockerfile if you wanted to rebuild,
-          # but since you already pushed your image above, skip build:
-          imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
-          resourceGroup: discord-bots
-          containerAppName: ascii-art-bot-${{ github.ref_name }}
-          containerAppEnvironment: discord-bots-aca-env
-
-          # ensure it knows how to pull from GHCR
-          registryUrl: ghcr.io
-          registryUsername: ${{ github.actor }}
-          registryPassword: ${{ secrets.GITHUB_TOKEN }}
-
-          # wire in your bot’s runtime vars
-          environment-variables: " DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }} DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }} DISCORD_GUILD_ID=${{ secrets.DISCORD_GUILD_ID }} NODE_ENV=${{ github.ref_name }} TERM=xterm-256color COLORTERM=24bit FORCE_COLOR=1"
+          resourceGroup: ${{ env.RG }}
+          containerAppEnvironment: ${{ env.CA_ENV }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          yamlConfigPath: './containerapp.yaml'
