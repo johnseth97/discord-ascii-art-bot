@@ -19,6 +19,17 @@ export const data = new SlashCommandBuilder()
   .setDescription(
     "Convert an image to ASCII art (text, PNG, or GIF). Provide an attachment or URL.",
   )
+  .addStringOption((opt: SlashCommandStringOption) =>
+    opt
+      .setName("output")
+      .setDescription("Output format")
+      .addChoices(
+        { name: "Text (ANSI)", value: "text" },
+        { name: "PNG Image", value: "png" },
+        { name: "GIF Animation", value: "gif" },
+      )
+      .setRequired(true),
+  )
   .addAttachmentOption((opt: SlashCommandAttachmentOption) =>
     opt
       .setName("image")
@@ -30,17 +41,6 @@ export const data = new SlashCommandBuilder()
       .setName("url")
       .setDescription("Direct link to an image to convert")
       .setRequired(false),
-  )
-  .addStringOption((opt: SlashCommandStringOption) =>
-    opt
-      .setName("output")
-      .setDescription("Output format")
-      .addChoices(
-        { name: "Text (ANSI)", value: "text" },
-        { name: "PNG Image", value: "png" },
-        { name: "GIF Animation", value: "gif" },
-      )
-      .setRequired(true),
   )
   .addStringOption((opt: SlashCommandStringOption) =>
     opt
@@ -139,7 +139,8 @@ export async function execute(
         if (code !== 0) {
           console.error("GIF conversion error:", stderr);
           await interaction.editReply({
-            content: "❌ GIF conversion failed or unsupported format.",
+            content:
+              " GIF conversion failed! 😭 Not al GIFs are supported by the base tool, try a different one.",
           });
           return;
         }
