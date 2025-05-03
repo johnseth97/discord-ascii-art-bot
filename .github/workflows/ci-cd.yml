@@ -40,16 +40,21 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  deploy:
+  deploy-to-aca:
     needs: build-and-push
     runs-on: ubuntu-latest
-    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
-
-
+    environment: Testing
+    env:
+      # bring the testing secrets into the step
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN_TESTING }}
+      DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID_TESTING }}
+      PACKAGE_TAG:  ${{ vars.PACKAGE_TAG }}
+      RG: discord-bots
+      CA_ENV: discord-bots-aca-env
+      CONTAINER_APP_NAME: $${ vars.CONTAINER_APP_NAME }} 
+      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }} 
     steps:
-      - uses: actions/checkout@v3
-
-      - name: Log in to Azure
+      - name: Azure Login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
@@ -57,20 +62,16 @@ jobs:
       - name: Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v1
         with:
-          # Your existing RG and Container App name
-          resourceGroup: discord-bots
-          containerAppName: ${{ vars.CONTAINER_NAME }}
-
-          # Tell it to deploy your GHCR image + tag
-          imageToDeploy: ${{ needs.build-and-push.outputs.image-ref }}
-
-          # Since this is GHCR (not ACR), provide registry creds
-          acrUsername: ${{ github.actor }}
-          acrPassword: ${{ secrets.GITHUB_TOKEN }}
+          resourceGroup: ${{ env.RG }}
+          containerAppName: ${{ env.CONTAINER_APP_NAME }}
+          imageToDeploy: ${{ env.IMAGE_REF }}
+          registryServer: ghcr.io
+          registryUsername: ${{ github.actor }}
+          registryPassword: ${{ secrets.GITHUB_TOKEN }}
           environmentVariables: |
-            DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
-            DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
-            NODE_ENV=${{ vars.NODE_ENV }}
+            DISCORD_BOT_TOKEN=${{ env.DISCORD_BOT_TOKEN }}
+            DISCORD_CLIENT_ID=${{ env.DISCORD_CLIENT_ID }}
+            NODE_ENV=production
             TERM=xterm-256color
             COLORTERM=24bit
             FORCE_COLOR=1
