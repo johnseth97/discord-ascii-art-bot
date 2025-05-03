@@ -43,6 +43,8 @@ jobs:
   deploy:
     needs: build-and-push
     runs-on: ubuntu-latest
+    environment: ${{ github.ref == 'refs/heads/main' && 'Production' || 'Testing' }}
+
 
     steps:
       - uses: actions/checkout@v3
@@ -65,3 +67,10 @@ jobs:
           # Since this is GHCR (not ACR), provide registry creds
           acrUsername: ${{ github.actor }}
           acrPassword: ${{ secrets.GITHUB_TOKEN }}
+        env: |
+          DISCORD_BOT_TOKEN=${{ secrets.DISCORD_BOT_TOKEN }}
+          DISCORD_CLIENT_ID=${{ secrets.DISCORD_CLIENT_ID }}
+          NODE_ENV=${{ vars.NODE_ENV }}
+          TERM=xterm-256color
+          COLORTERM=24bit
+          FORCE_COLOR=1
