@@ -48,11 +48,11 @@ jobs:
       # bring the testing secrets into the step
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN_TESTING }}
       DISCORD_CLIENT_ID: ${{ secrets.DISCORD_CLIENT_ID_TESTING }}
-      PACKAGE_TAG:  ${{ vars.PACKAGE_TAG }}
+      PACKAGE_TAG: ${{ vars.PACKAGE_TAG }}
       RG: discord-bots
       CA_ENV: discord-bots-aca-env
-      CONTAINER_APP_NAME: $${ vars.CONTAINER_APP_NAME }} 
-      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }} 
+      CONTAINER_APP_NAME: ${ vars.CONTAINER_APP_NAME }}
+      IMAGE_REF: ${{ needs.build-and-push.outputs.image-ref }}
     steps:
       - name: Azure Login
         uses: azure/login@v1
