@@ -1,91 +1,58 @@
-// index.ts
-import {
-  Client,
-  GatewayIntentBits,
-  Collection,
-  SlashCommandBuilder,
-  ChatInputCommandInteraction,
-  Interaction,
-} from "discord.js";
-import fs from "fs";
-import path from "path";
-import * as os from "os";
-import { readdir, stat, unlink } from "fs/promises";
-import { healthcheck } from "./utils/healthcheck";
+// src/index.ts
+import "dotenv/config";
+import express from "express";
+import { registerCommands } from "./bot";
+import { healthRouter } from "./routes/health";
+import { interactionsRouter } from "./routes/interactions";
+import { discordVerify } from "./utils/discordVerify";
+import { logger } from "./utils/logger"; // ← import logger
+import { RequestBody } from "discord.js";
 
-healthcheck();
+async function main() {
+  // 0) Log required environment variables
+  logger.info(`Node environment: ${process.env.NODE_ENV}`);
 
-if (process.env.NODE_ENV !== "production") {
-  require("dotenv").config();
-  console.log("Loaded .env file");
-  console.log("Environment:", process.env.NODE_ENV);
-  console.log("Client ID:", process.env.DISCORD_CLIENT_ID);
-}
-
-// Extend Client to include commands
-declare module "discord.js" {
-  interface Client {
-    commands: Collection<
-      string,
-      {
-        data: SlashCommandBuilder;
-        execute(interaction: ChatInputCommandInteraction): Promise<void>;
-      }
-    >;
-  }
-}
-
-const client = new Client({
-  intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages],
-});
-
-// Load commands
-client.commands = new Collection();
-const commandsPath = path.join(__dirname, "commands");
-const commandFiles = fs
-  .readdirSync(commandsPath)
-  .filter((file) => file.endsWith(".js") || file.endsWith(".ts"));
-for (const file of commandFiles) {
-  // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { data, execute } = require(path.join(commandsPath, file));
-  client.commands.set(data.name, { data, execute });
-}
-
-// Cleanup temp dir files older than 8 hours
-async function cleanupTempDir() {
-  const tmpDir = os.tmpdir();
-  const files = await readdir(tmpDir);
-  const now = Date.now();
-  for (const file of files) {
-    if (/^[0-9a-fA-F-]+(-ascii-art)?\.(png|txt)$/.test(file)) {
-      const p = path.join(tmpDir, file);
-      const stats = await stat(p);
-      if (now - stats.mtimeMs > 8 * 3600 * 1000) {
-        await unlink(p).catch(() => {});
-      }
-    }
-  }
-}
-
-client.once("ready", async () => {
-  console.log(`Logged in as ${client.user!.tag}`);
-  await cleanupTempDir();
-  setInterval(cleanupTempDir, 3600 * 1000);
-});
-
-client.on("interactionCreate", async (interaction: Interaction) => {
-  if (!interaction.isChatInputCommand()) return;
-  const cmd = client.commands.get(interaction.commandName);
-  if (!cmd) return;
+  // 1) Register slash‑commands
   try {
-    await cmd.execute(interaction);
-  } catch (error) {
-    console.error(error);
-    await interaction.reply({
-      content: "❌ Error while executing command",
-      ephemeral: true,
-    });
+    await registerCommands();
+    logger.info("Discord commands registered");
+  } catch (err) {
+    logger.error("Failed to register commands:", err);
+    process.exit(1);
   }
-});
 
-client.login(process.env.DISCORD_BOT_TOKEN);
+  // 2) Spin up Express
+  const app = express();
+  const port = Number(process.env.PORT) || 8080;
+
+  // 3) Use Express and parse verify from json body for discordVerify()
+  app.use(
+    express.json({
+      verify: (req, _res, buf) => {
+        // suppress body-parser warning
+        // @ts-expect-error This is never used by our app, discord doesn't include the type
+        (req as RequestBody).rawBody = buf; // ← discordVerify() needs this
+      },
+    }),
+  );
+  // 4) Set up routes
+  app.use("/health", healthRouter);
+  app.use(
+    "/interactions",
+    discordVerify(), // ← verify Discord signatures(no-op in dev)
+    interactionsRouter,
+  );
+
+  // Optional root
+  app.get("/", (_req, res) => {
+    res.status(200).send("OK");
+    logger.debug("🌳 Root endpoint hit");
+  });
+
+  // 5) Start server
+  app.listen(port, () => {
+    logger.info(`HTTP server listening on port ${port}`);
+  });
+}
+
+main();

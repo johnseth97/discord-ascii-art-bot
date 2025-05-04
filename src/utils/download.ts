@@ -4,7 +4,7 @@ import * as os from "os";
 import * as path from "path";
 import { randomUUID } from "crypto";
 
-export async function download(url: string): Promise<string> {
+export async function downloadImage(url: string): Promise<string> {
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(

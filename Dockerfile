@@ -1,12 +1,12 @@
-# Dockerfile.prod
-
+# Dockerfile
 # Build stage: compile TypeScript
-FROM node:20-alpine AS build
+ARG SKIP_BUILD=false
+FROM node:20-alpine AS builder
 WORKDIR /app
 COPY package*.json tsconfig.json ./
 RUN npm ci
 COPY . .
-RUN npm run build
+RUN if [ "$SKIP_BUILD" = "false" ]; then npm run build; fi
 
 # Runtime stage: Debian-based for apt support
 FROM node:20-slim AS runtime
@@ -30,9 +30,9 @@ RUN apt-get update \
   && rm -rf /var/lib/apt/lists/*
 
 # Copy built files and dependencies
-COPY --from=build /app/dist ./dist
-COPY --from=build /app/node_modules ./node_modules
-
+COPY --from=builder /app/dist ./dist
+COPY package*.json ./
+RUN npm ci --only=production
 # Entrypoint with dumb-init for signal handling
 ENTRYPOINT ["/usr/bin/dumb-init", "--"]
 CMD ["node", "dist/index.js"]
