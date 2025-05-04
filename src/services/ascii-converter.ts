@@ -22,12 +22,12 @@ export async function convertText(
 ): Promise<string> {
   const saveDir = os.tmpdir();
   const base = path.basename(inputPath, path.extname(inputPath));
-  // Use ascii-image-converter flags: save to directory, only save, ansi
   const args = [
     inputPath,
     "--save-txt",
     saveDir,
     "--only-save",
+    "--ansi",
     ...options.flags,
   ];
   await execFileAsync("ascii-image-converter", args);
@@ -45,13 +45,26 @@ export async function convertPNG(
 ): Promise<Buffer> {
   const saveDir = os.tmpdir();
   const base = path.basename(inputPath, path.extname(inputPath));
+  // ensure default sizing and font-color
+  const flags = [...options.flags];
+  const hasSizing = flags.some(
+    (f) => f === "--width" || f === "--dimensions" || f === "--full",
+  );
+  if (!hasSizing) {
+    flags.unshift("--full"); // default to full dimensions
+  }
+  // default glyph color: black on white by default
+  const defaultFontColor = ["--font-color", "0,0,0"];
+
   const args = [
     inputPath,
-    "--save-png",
+    "--save-img",
     saveDir,
     "--only-save",
-    ...options.flags,
+    ...defaultFontColor,
+    ...flags,
   ];
+
   await execFileAsync("ascii-image-converter", args);
   const outputPath = path.join(saveDir, `${base}-ascii-art.png`);
   return fs.readFileSync(outputPath);

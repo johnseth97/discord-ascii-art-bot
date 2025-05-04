@@ -6,7 +6,7 @@ import type {
   APIApplicationCommandInteractionDataOption,
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
-import { convertGIF } from "../services/ascii-converter";
+import { convertGIF } from "../../services/ascii-converter";
 import { REST } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 

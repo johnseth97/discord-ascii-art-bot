@@ -7,9 +7,9 @@ import type {
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
 import { downloadImage } from "../utils/download";
-import { handleSaveTxt } from "./save-txt";
-import { handleSaveImg } from "./save-img";
-import { handleSaveGif } from "./save-gif";
+import { handleSaveGif } from "../helpers/ascii/save-gif";
+import { handleSaveImg } from "../helpers/ascii/save-img";
+import { handleSaveTxt } from "../helpers/ascii/save-txt";
 
 // Top-level /ascii command with three subcommands
 export const data = new SlashCommandBuilder()

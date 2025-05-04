@@ -5,7 +5,7 @@ import type {
   APIApplicationCommandInteractionDataSubcommandOption,
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
-import { convertPNG } from "../services/ascii-converter";
+import { convertPNG } from "../../services/ascii-converter";
 import { REST, Routes } from "discord.js";
 
 const token = process.env.DISCORD_BOT_TOKEN!;

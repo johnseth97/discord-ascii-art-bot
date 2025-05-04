@@ -2,11 +2,12 @@
 import "dotenv/config";
 import express from "express";
 import { logger } from "./utils/logger"; // ← import logger
-
 import { registerCommands } from "./bot";
 import { healthRouter } from "./routes/health";
 import { interactionsRouter } from "./routes/interactions";
 import { discordVerify } from "./utils/discordVerify";
+import { convertPNG } from "./services/ascii-converter";
+import { downloadImage } from "./utils/download";
 
 async function main() {
   // 0) Log required environment variables

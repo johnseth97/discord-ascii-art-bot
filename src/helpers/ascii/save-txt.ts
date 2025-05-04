@@ -6,8 +6,8 @@ import type {
   APIApplicationCommandInteractionDataOption,
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
-import { convertText } from "../services/ascii-converter";
-import type { TextOptions } from "../types/converter-options";
+import { convertText } from "../../services/ascii-converter";
+import type { TextOptions } from "../../types/converter-options";
 
 export async function handleSaveTxt(
   interaction: APIChatInputApplicationCommandInteraction,
