@@ -1,50 +1,41 @@
 # .github/workflows/ci.yml
 ---
 name: CI
-
 on:
   push:
-    branches:
-      - testing
-      - main
+    branches: [testing, main]
 
 jobs:
-  build:
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with: {node-version: latest}
+      - run: npm ci
+      - run: npm run lint
 
-      - name: Cache node modules
-        uses: actions/cache@v3
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: |
-            ${{ runner.os }}-node-
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with: {node-version: latest}
+      - run: npm ci
+      - run: npm test
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 'latest'
-          registry-url: 'https://registry.npmjs.org/'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Lint code
-        run: npm run lint
-
-      - name: Run tests
-        run: npm test
-
-      - name: Build application
-        run: npm run build
-
-      - name: Upload build artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dist
-          path: dist
+  build:
+    name: Build & Artifact
+    needs: [lint, test]        # only runs if both above pass
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v3
+        with: {node-version: latest}
+      - run: npm ci
+      - run: npm run build
+      - uses: actions/upload-artifact@v3
+        with: {name: dist, path: dist}
 ...
