@@ -1,16 +1,17 @@
 # GH-Actions: .github/workflows/release.yml
 ---
-name: Semantic Release
+name: Release
 
 on:
-  push:
-    branches:
-      - testing   # PR builds
-      - main      # Production releases
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
 
 jobs:
   release:
-    name: Run Semantic Release
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +23,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: 'latest'
           registry-url: 'https://registry.npmjs.org/'
 
       - name: Install dependencies
@@ -32,6 +33,5 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          # GITHUB_RUN_NUMBER injected by Actions for buildNumber
-        run: npx semantic-release
+        run: npx semantic-release --no-ci
 ...
