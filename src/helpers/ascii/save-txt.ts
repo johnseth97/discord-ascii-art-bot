@@ -3,11 +3,10 @@ import type {
   APIChatInputApplicationCommandInteraction,
   APIInteractionResponse,
   APIApplicationCommandInteractionDataSubcommandOption,
-  APIApplicationCommandInteractionDataOption,
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
 import { convertText } from "../../services/ascii-converter";
-import type { TextOptions } from "../../types/converter-options";
+import { DiscordAPIError, HTTPError } from "discord.js";
 
 export async function handleSaveTxt(
   interaction: APIChatInputApplicationCommandInteraction,
@@ -51,7 +50,8 @@ ${ascii}
       },
     };
   } catch (err) {
-    console.error("Text conversion error:", err);
+    const Error = err as DiscordAPIError | HTTPError;
+    console.error("Text conversion error:", Error);
     return { type: 4, data: { content: "❌ Text conversion failed." } };
   }
 }

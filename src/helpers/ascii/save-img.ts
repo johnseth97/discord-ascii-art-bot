@@ -6,7 +6,7 @@ import type {
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
 import { convertPNG } from "../../services/ascii-converter";
-import { REST, Routes } from "discord.js";
+import { DiscordAPIError, HTTPError, REST, Routes } from "discord.js";
 
 const token = process.env.DISCORD_BOT_TOKEN!;
 const clientId = process.env.DISCORD_CLIENT_ID!;
@@ -59,10 +59,11 @@ export async function handleSaveImg(
       await rest.post(Routes.webhookMessage(clientId, interaction.token), {
         body: { files: [{ attachment: buffer, name: "ascii-art.png" }] },
       });
-    } catch (err: any) {
+    } catch (err) {
+      const Error = err as DiscordAPIError | HTTPError;
       // Send follow-up on error
       await rest.post(Routes.webhookMessage(clientId, interaction.token), {
-        body: { content: `❌ PNG conversion failed: ${err.message}` },
+        body: { content: `❌ PNG conversion failed: ${Error.message}` },
       });
     }
   })();

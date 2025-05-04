@@ -5,6 +5,7 @@ import type {
 } from "discord-api-types/v10";
 import { loadCommands } from "../services/command-loader";
 import { logger } from "../utils/logger"; // ← import your logger
+import { NoParamCallback } from "fs";
 
 const commands = loadCommands();
 
@@ -27,8 +28,8 @@ interactionsRouter.get("/", (req: Request, res: Response) => {
 interactionsRouter.post(
   "/",
   async (
-    req: Request<{}, any, APIInteraction>,
-    res: Response<any>,
+    req: Request<NoParamCallback, APIInteractionResponse, APIInteraction>,
+    res: Response<APIInteractionResponse>,
     next: NextFunction,
   ) => {
     try {

@@ -3,11 +3,10 @@ import type {
   APIChatInputApplicationCommandInteraction,
   APIInteractionResponse,
   APIApplicationCommandInteractionDataSubcommandOption,
-  APIApplicationCommandInteractionDataOption,
 } from "discord-api-types/v10";
 import { ApplicationCommandOptionType } from "discord-api-types/v10";
 import { convertGIF } from "../../services/ascii-converter";
-import { REST } from "discord.js";
+import { DiscordAPIError, HTTPError, REST } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 
 const tokenGif = process.env.DISCORD_BOT_TOKEN!;
@@ -53,10 +52,11 @@ export async function handleSaveGif(
         Routes.webhookMessage(clientIdGif, interaction.token),
         { body: { files: [{ attachment: buffer, name: "ascii-art.gif" }] } },
       );
-    } catch (err: any) {
+    } catch (err) {
+      const Error = err as DiscordAPIError | HTTPError;
       await restGif.post(
         Routes.webhookMessage(clientIdGif, interaction.token),
-        { body: { content: `❌ GIF conversion failed: ${err.message}` } },
+        { body: { content: `❌ GIF conversion failed: ${Error.message}` } },
       );
     }
   })();

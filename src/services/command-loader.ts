@@ -29,7 +29,7 @@ export function loadCommands(): CommandModule[] {
   for (const file of files) {
     const filePath = path.join(commandsPath, file);
     // Dynamically require the module
-    const mod = require(filePath) as Partial<CommandModule>;
+    const mod = import(filePath) as Partial<CommandModule>;
 
     if (mod.data && typeof mod.executeHTTP === "function") {
       commands.push(mod as CommandModule);

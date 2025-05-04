@@ -1,13 +1,12 @@
 // src/index.ts
 import "dotenv/config";
 import express from "express";
-import { logger } from "./utils/logger"; // ← import logger
 import { registerCommands } from "./bot";
 import { healthRouter } from "./routes/health";
 import { interactionsRouter } from "./routes/interactions";
 import { discordVerify } from "./utils/discordVerify";
-import { convertPNG } from "./services/ascii-converter";
-import { downloadImage } from "./utils/download";
+import { logger } from "./utils/logger"; // ← import logger
+import { RequestBody } from "discord.js";
 
 async function main() {
   // 0) Log required environment variables
@@ -30,7 +29,9 @@ async function main() {
   app.use(
     express.json({
       verify: (req, _res, buf) => {
-        (req as any).rawBody = buf; // ← discordVerify() needs this
+        // suppress body-parser warning
+        // @ts-expect-error This is never used by our app, discord doesn't include the type
+        (req as RequestBody).rawBody = buf; // ← discordVerify() needs this
       },
     }),
   );
