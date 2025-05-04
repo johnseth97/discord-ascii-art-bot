@@ -4,12 +4,12 @@
       "name": "testing",
       "channel": "pr",
       "prerelease": true,
-      "tagFormat": "${version}-PR"
+      "tagFormat": "<%= version %>-PR"
     },
     {
       "name": "main",
       "channel": "release",
-      "tagFormat": "${version}-release"
+      "tagFormat": "<%= version %>-release"
     }
   ],
   "plugins": [
