@@ -1,6 +1,7 @@
 # GH-Actions: .github/workflows/ci-cd.yml
 ---
 name: CI/CD
+needs: release
 
 permissions:
   contents: read

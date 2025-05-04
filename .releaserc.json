@@ -1,0 +1,20 @@
+{
+  "branches": [
+    {
+      "name": "testing",
+      "channel": "pr",
+      "tagFormat": "${version}-PR"
+    },
+    {
+      "name": "main",
+      "channel": "release",
+      "tagFormat": "${version}-release"
+    }
+  ],
+  "plugins": [
+    "@semantic-release/commit-analyzer",
+    "@semantic-release/release-notes-generator",
+    "@semantic-release/npm",
+    "@semantic-release/github"
+  ]
+}
