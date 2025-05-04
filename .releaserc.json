@@ -3,6 +3,7 @@
     {
       "name": "testing",
       "channel": "pr",
+      "prerelease": true,
       "tagFormat": "${version}-PR"
     },
     {
